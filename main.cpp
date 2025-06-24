@@ -14,6 +14,10 @@ using namespace std;
 
 #include "Scheduler.h"
 #include "Process.h"
+#include "FCFS.h"
+#include "RoundRobin.h"
+
+
 
 struct Config {
     int num_cpu = 0;
@@ -160,13 +164,9 @@ string trim(const string& str) {
 
 int main() {
     Config config;
-    FCFSScheduler scheduler;
     string inputCommand;
     ConsoleManager consoleManager = ConsoleManager();
-
-
-    scheduler.start();
-
+    unique_ptr<Scheduler> scheduler;
     consoleManager.initializeScreen();
 
 
@@ -175,10 +175,12 @@ int main() {
 
         getline(cin, inputCommand);
         if (inputCommand == "initialize") {
+            string value;
             ifstream configFile("config.txt");
             if (configFile) {
                 string line;
                 while (getline(configFile, line)) {
+                    
                     istringstream iss(line);
                     string key;
                     if (iss >> key) {
@@ -201,6 +203,18 @@ int main() {
                     << "Minimum instructions per process: " << config.min_ins << "\n"
                     << "Maximum instructions per process: " << config.max_ins << "\n"
                     << "Delay per execution: " << config.delays_per_exec << " CPU cycles\n";
+
+                
+                if (config.scheduler == "fcfs") {
+                   scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(config.num_cpu));
+                   scheduler->start();
+                }
+                else if (config.scheduler == "rr") {
+                   cout << "RR Created";
+                   scheduler = std::make_unique<RRScheduler>(config.num_cpu, config.quantum_cycles);
+                   scheduler->start();
+
+                }
             }
             else {
                 cout << "Error: config.txt not found\n";
@@ -229,11 +243,11 @@ int main() {
                     }
                     else if (subCommand == "print") {
                         for (int i = 0; i < 10; ++i) {
-                            scheduler.addProcess(std::make_shared<Process>(name, i));
+                           // scheduler.addProcess(std::make_shared<Process>(name, i));
                         }
                     }
                     else if (subCommand == "screen -ls") {
-                        scheduler.listProcesses();
+                      //  scheduler.listProcesses();
                     }
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
@@ -257,13 +271,14 @@ int main() {
                         consoleManager.initializeScreen();
                         break;
                     }
-                    else if (subCommand == "print") {
-                        for (int i = 0; i < 10; ++i) {
-                            scheduler.addProcess(std::make_shared<Process>(name, i));
-                        }
-                    }
+                    
                     else if (subCommand == "screen -ls") {
-                        scheduler.listProcesses();
+                        if (scheduler) {
+                            scheduler->listProcesses();
+                        }
+                        else {
+                            cout << "Error: Scheduler not initialized\n";
+                        }
                     }
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
@@ -277,7 +292,55 @@ int main() {
         }
             
         else if (inputCommand == "scheduler-test") {
-            cout << "scheduler-test command recognized. Doing something.\n";
+            if (!config.initialized) {  // Check both initialization and scheduler
+                cout << "Error: System not initialized. Use 'initialize' first.\n";
+                continue;
+            }
+            else if (!scheduler) {
+                cout << "Error: Scheduler not created. Use 'initialize' first.\n";
+                continue;
+            }
+
+            cout << "Generating dummy processes...\n";
+
+            // Generate 5 dummy processes with random instructions
+            for (int i = 0; i < 5; i++) {
+                string processName = "dummy_" + to_string(i);
+                auto process = make_shared<Process>(processName, i);
+
+                // Add random instructions (3-5 instructions per process)
+                int numInstructions = 3 + rand() % 3;
+                for (int j = 0; j < numInstructions; j++) {
+                    int instructionType = rand() % 4;
+                    switch (instructionType) {
+                    case 0:  // PRINT
+                        process->addInstruction("PRINT \"Hello from " + processName + "\"");
+                        break;
+                    case 1:  // DECLARE
+                        process->addInstruction("DECLARE var" + to_string(j) + " " + to_string(rand() % 100));
+                        break;
+                    case 2:  // ADD
+                        process->addInstruction("ADD result var" + to_string(j) + " " + to_string(rand() % 50));
+                        break;
+                    case 3:  // SLEEP
+                        process->addInstruction("SLEEP " + to_string(1 + rand() % 5));
+                        break;
+                    default:
+                        process->addInstruction("PRINT \"Default instruction\"");
+                        break;
+                    }
+                }
+
+                try {
+                    scheduler->addProcess(process);
+                    cout << "Added process: " << processName
+                        << " with " << numInstructions << " instructions\n";
+                }
+                catch (const exception& e) {
+                    cerr << "Failed to add process " << processName
+                        << ": " << e.what() << "\n";
+                }
+            }
         }
         else if (inputCommand == "scheduler-stop") {
             cout << "scheduler-stop command recognized. Doing something.\n";
@@ -291,7 +354,9 @@ int main() {
             consoleManager.initializeScreen();
         }
         else if (inputCommand == "exit") {
-            scheduler.stop();
+            if (scheduler) {
+                scheduler->stop();
+            }
 
             cout << "Exiting the program.\n";
             break;

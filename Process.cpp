@@ -42,10 +42,6 @@ void Process::executePrintCommand(int core, const std::string& screenName) {
 int Process::getId() const {
     return id;
 }
-bool Process::isFinished() const {
-    return printCount >= totalPrints;
-}
-
 std::string Process::getName() const {
     return name;
 }
@@ -59,4 +55,21 @@ void Process::writeHeader() {
     if (printCount == 0 && logFile.is_open()) {
         logFile << "Process name: " << name << "\nLogs:\n";
     }
+}
+
+void Process::executeNextInstruction() {
+    if (currentInstruction < instructions.size()) {
+        const auto& instr = instructions[currentInstruction++];
+
+        std::lock_guard<std::mutex> lock(fileMutex);
+        logFile << "Executing: " << instr << "\n";
+
+        if (instr.rfind("PRINT", 0) == 0) {
+            logFile << "Hello world from " << getName() << "!\n";
+        }
+    }
+}
+
+void Process::addInstruction(const std::string& instruction) {
+    instructions.push_back(instruction);
 }

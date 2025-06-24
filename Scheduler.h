@@ -1,34 +1,33 @@
 #pragma once
-#include <queue>
+#include "Process.h"
+#include <vector>
 #include <memory>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
-#include "Process.h"
 
-class FCFSScheduler {
+class Scheduler {
 public:
-    FCFSScheduler();
-    ~FCFSScheduler();
+    Scheduler(int numCores);
+    virtual ~Scheduler();  
 
-    void start();
-    void stop();
-    void addProcess(std::shared_ptr<Process> process);
-    void listProcesses();
+    virtual void start();
+    virtual void stop();
+    virtual void addProcess(std::shared_ptr<Process> process) = 0;
+    virtual void listProcesses();  
 
-private:
-    void schedulerLoop();
-    void workerLoop(int coreId);
-
-    std::queue<std::shared_ptr<Process>> processQueue;
+protected:
+    int numCores;
     std::vector<std::thread> workerThreads;
     std::thread schedulerThread;
-    std::mutex queueMutex;
+    std::mutex queueMutex;  
     std::condition_variable cv;
     std::atomic<bool> running;
     std::vector<std::shared_ptr<Process>> runningProcesses;
     std::vector<std::shared_ptr<Process>> finishedProcesses;
     std::vector<bool> coreAvailable;
 
+    virtual void schedulerLoop() = 0;
+    virtual void workerLoop(int coreId) = 0;
 };

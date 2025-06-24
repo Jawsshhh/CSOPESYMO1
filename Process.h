@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <mutex>
-
+#include <vector>
 
 class Process {
 public:
@@ -14,13 +14,16 @@ public:
 
     void executePrintCommand(int core, const std::string& screenName);
 
-    bool isFinished() const;
     std::string getName() const;
     std::string getCreationTime() const;
     int getId() const;
     void setAssignedCore(int core) { assignedCore = core; }
     int getAssignedCore() const { return assignedCore; }
     std::ofstream& getLogFile() { return logFile; }
+
+    void executeNextInstruction();
+    void addInstruction(const std::string& instruction);
+    bool isFinished() const { return currentInstruction >= instructions.size(); }
     
     void writeHeader();
 
@@ -33,4 +36,6 @@ private:
     int printCount = 0;
     const int totalPrints = 100;
     int assignedCore = -1;
+    std::vector<std::string> instructions;
+    size_t currentInstruction = 0;
 };
