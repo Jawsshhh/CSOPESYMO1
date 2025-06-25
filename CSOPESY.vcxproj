@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FCFS.h" />
+    <ClInclude Include="Instructions.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="RoundRobin.h" />
     <ClInclude Include="Scheduler.h" />

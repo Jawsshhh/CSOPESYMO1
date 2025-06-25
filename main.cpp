@@ -169,6 +169,7 @@ int main() {
     unique_ptr<Scheduler> scheduler;
     consoleManager.initializeScreen();
 
+    int cpuTick = 0;
 
     while (true) {
         cout << "Enter a command: ";
@@ -291,7 +292,7 @@ int main() {
             }
         }
             
-        else if (inputCommand == "scheduler-test") {
+        else if (inputCommand == "scheduler-start") {
             if (!config.initialized) {  // Check both initialization and scheduler
                 cout << "Error: System not initialized. Use 'initialize' first.\n";
                 continue;
@@ -306,8 +307,9 @@ int main() {
             for (int i = 0; i < 10; i++) {
                 string processName = "dummy_" + to_string(i);
                 auto process = make_shared<Process>(processName, i);
+                process->setMaxExecutionDelay(config.delays_per_exec);
 
-                int numInstructions = 100;
+                int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
                 for (int j = 0; j < numInstructions; j++) {
                     int instructionType = rand() % 4;
                     switch (instructionType) {

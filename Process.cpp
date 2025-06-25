@@ -38,6 +38,11 @@ std::string Process::getCreationTime() const {
 
 
 void Process::executeNextInstruction() {
+    if (delayCount > 0) {
+        delayCount--;
+        return;
+    }
+    
     if (currentInstruction < instructions.size()) {
         const auto& instr = instructions[currentInstruction++];
 
@@ -53,6 +58,7 @@ void Process::executeNextInstruction() {
         else if (instr.rfind("SLEEP", 0) == 0) {
             logInstruction("SLEEP", instr.substr(6));
         }
+        delayCount = maxExecDelay;
     }
 }
 

@@ -5,7 +5,11 @@
 #include <iomanip>
 #include <sstream>
 #include <mutex>
+#include <map>
+#include <string>
 #include <vector>
+//#include "Instruction.h"
+
 
 class Process {
 public:
@@ -21,6 +25,8 @@ public:
     void executeNextInstruction();
     void addInstruction(const std::string& instruction);
     bool isFinished() const { return currentInstruction >= instructions.size(); }
+    void setMaxExecutionDelay(int delay) { maxExecDelay = std::max(0, delay); }
+
 
 private:
     static std::mutex fileMutex;
@@ -33,4 +39,7 @@ private:
     int assignedCore = -1;
     std::vector<std::string> instructions;
     size_t currentInstruction = 0;
+
+    int delayCount = 0;        
+    int maxExecDelay = 0;     // config value
 };
