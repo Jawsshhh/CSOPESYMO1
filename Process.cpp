@@ -14,8 +14,8 @@ Process::Process(const std::string& name, int id) : name(name), id(id) {
     std::lock_guard<std::mutex> lock(fileMutex);
     logFile.open("process_" + std::to_string(id) + ".txt", std::ios::out | std::ios::trunc);
     logFile << "Process name: " << name << "\nLogs:\n";
+    logFile.flush();
 }
-
 Process::~Process() {
     std::lock_guard<std::mutex> lock(fileMutex);
     if (logFile.is_open()) {
@@ -24,21 +24,7 @@ Process::~Process() {
     }
 }
 
-void Process::executePrintCommand(int core, const std::string& screenName) {
-    std::lock_guard<std::mutex> lock(fileMutex);
-    if (printCount >= totalPrints) return;
 
-    time_t now = time(nullptr);
-    tm local;
-    localtime_s(&local, &now);
-    std::stringstream ss;
-    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
-
-    logFile << "(" << ss.str() << ") Core:" << core
-        << " \"Hello world from " << getName() << "\"\n";
-    logFile.flush();  // Explicit flush after each write
-    printCount++;
-}
 int Process::getId() const {
     return id;
 }
@@ -50,24 +36,37 @@ std::string Process::getCreationTime() const {
     return creationTime;
 }
 
-void Process::writeHeader() {
-    std::lock_guard<std::mutex> lock(fileMutex);
-    if (printCount == 0 && logFile.is_open()) {
-        logFile << "Process name: " << name << "\nLogs:\n";
-    }
-}
 
 void Process::executeNextInstruction() {
     if (currentInstruction < instructions.size()) {
         const auto& instr = instructions[currentInstruction++];
 
-        std::lock_guard<std::mutex> lock(fileMutex);
-        logFile << "Executing: " << instr << "\n";
-
         if (instr.rfind("PRINT", 0) == 0) {
-            logFile << "Hello world from " << getName() << "!\n";
+            logInstruction("PRINT", instr.substr(instr.find('"') + 1, instr.find_last_of('"') - instr.find('"') - 1));
+        }
+        else if (instr.rfind("DECLARE", 0) == 0) {
+            logInstruction("DECLARE", instr.substr(8));
+        }
+        else if (instr.rfind("ADD", 0) == 0) {
+            logInstruction("ADD", instr.substr(4));
+        }
+        else if (instr.rfind("SLEEP", 0) == 0) {
+            logInstruction("SLEEP", instr.substr(6));
         }
     }
+}
+
+void Process::logInstruction(const std::string& type, const std::string& details) {
+    time_t now = time(nullptr);
+    tm local;
+    localtime_s(&local, &now);
+    std::stringstream ss;
+    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+
+    std::lock_guard<std::mutex> lock(fileMutex);
+    logFile << "(" << ss.str() << ") Core:" << assignedCore 
+            << " \"" << type << " " << details << "\"\n";
+    logFile.flush();
 }
 
 void Process::addInstruction(const std::string& instruction) {

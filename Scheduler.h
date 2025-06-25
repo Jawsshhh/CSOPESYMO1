@@ -6,6 +6,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <algorithm>
 
 class Scheduler {
 public:
@@ -30,4 +31,12 @@ protected:
 
     virtual void schedulerLoop() = 0;
     virtual void workerLoop(int coreId) = 0;
+    int findAvailableCore() {
+        for (int i = 0; i < numCores; ++i) {
+            if (coreAvailable[i]) {
+                return i;
+            }
+        }
+        return -1; // No available core
+    };
 };

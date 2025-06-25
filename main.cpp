@@ -303,13 +303,11 @@ int main() {
 
             cout << "Generating dummy processes...\n";
 
-            // Generate 5 dummy processes with random instructions
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 10; i++) {
                 string processName = "dummy_" + to_string(i);
                 auto process = make_shared<Process>(processName, i);
 
-                // Add random instructions (3-5 instructions per process)
-                int numInstructions = 3 + rand() % 3;
+                int numInstructions = 100;
                 for (int j = 0; j < numInstructions; j++) {
                     int instructionType = rand() % 4;
                     switch (instructionType) {

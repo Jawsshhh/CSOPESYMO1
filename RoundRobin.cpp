@@ -21,23 +21,21 @@ void RRScheduler::addProcess(std::shared_ptr<Process> process) {
 void RRScheduler::schedulerLoop() {
     while (running) {
         std::unique_lock<std::mutex> lock(queueMutex);
-
-        cv.wait(lock, [this]() {
-            return !readyQueue.empty() || !running;
-            });
+        cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
 
         if (!running) break;
 
-        for (int core = 0; core < numCores && !readyQueue.empty(); ++core) {
-            if (coreAvailable[core]) {
-                auto process = readyQueue.front();
-                readyQueue.pop();
+        while (!readyQueue.empty()) {
+            int core = findAvailableCore();
+            if (core == -1) break; // No cores available
 
-                process->setAssignedCore(core);
-                coreAvailable[core] = false;
-                runningProcesses.push_back(process);
-                cv.notify_all();
-            }
+            auto process = readyQueue.front();
+            readyQueue.pop();
+
+            process->setAssignedCore(core);
+            coreAvailable[core] = false;
+            runningProcesses.push_back(process);
+            cv.notify_all();
         }
 
         lock.unlock();
@@ -52,16 +50,20 @@ void RRScheduler::workerLoop(int coreId) {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             cv.wait(lock, [this, coreId]() {
+                if (!running) return true;
+
+                // Manual any_of implementation
                 for (const auto& p : runningProcesses) {
                     if (p->getAssignedCore() == coreId && !p->isFinished()) {
                         return true;
                     }
                 }
-                return !running;
+                return false;
                 });
 
             if (!running) break;
 
+            // Find the process assigned to this core
             for (auto it = runningProcesses.begin(); it != runningProcesses.end(); ++it) {
                 if ((*it)->getAssignedCore() == coreId && !(*it)->isFinished()) {
                     process = *it;
@@ -71,33 +73,30 @@ void RRScheduler::workerLoop(int coreId) {
         }
 
         if (process) {
+            // Process execution logic remains the same
             unsigned cyclesUsed = 0;
-
             while (cyclesUsed < quantum && !process->isFinished() && running) {
                 process->executeNextInstruction();
                 cyclesUsed++;
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-
-            if (!process->isFinished() && running) {
-                std::lock_guard<std::mutex> lock(queueMutex);
-                readyQueue.push(process);
-                cv.notify_one();
-            }
-            else if (process->isFinished()) {
-                std::lock_guard<std::mutex> lock(queueMutex);
-                finishedProcesses.push_back(process);
             }
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
+                if (!process->isFinished()) {
+                    readyQueue.push(process);
+                }
+                else {
+                    finishedProcesses.push_back(process);
+                }
+
                 runningProcesses.erase(
                     std::remove(runningProcesses.begin(), runningProcesses.end(), process),
                     runningProcesses.end());
+
                 coreAvailable[coreId] = true;
+                cv.notify_all();
             }
-            cv.notify_all();
         }
     }
 }
