@@ -28,6 +28,27 @@ Process::~Process() {
 int Process::getId() const {
     return id;
 }
+
+void Process::setAssignedCore(int core)
+{
+    assignedCore = core;
+}
+
+int Process::getAssignedCore() const
+{
+    return assignedCore;
+}
+
+bool Process::isFinished() const
+{
+    return currentInstruction >= instructions.size();
+}
+
+void Process::setMaxExecutionDelay(int delay)
+{
+    maxExecDelay = std::max(0, delay);
+}
+
 std::string Process::getName() const {
     return name;
 }

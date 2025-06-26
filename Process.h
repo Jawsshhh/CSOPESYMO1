@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 //#include "Instruction.h"
-
+//#include "SymbolTable.h"
 
 class Process {
 public:
@@ -19,13 +19,13 @@ public:
     std::string getName() const;
     std::string getCreationTime() const;
     int getId() const;
-    void setAssignedCore(int core) { assignedCore = core; }
-    int getAssignedCore() const { return assignedCore; }
+    void setAssignedCore(int core);
+    int getAssignedCore() const;
 
     void executeNextInstruction();
     void addInstruction(const std::string& instruction);
-    bool isFinished() const { return currentInstruction >= instructions.size(); }
-    void setMaxExecutionDelay(int delay) { maxExecDelay = std::max(0, delay); }
+    bool isFinished() const;
+    void setMaxExecutionDelay(int delay);
 
 
 private:
@@ -41,5 +41,5 @@ private:
     size_t currentInstruction = 0;
 
     int delayCount = 0;        
-    int maxExecDelay = 0;     // config value
+    int maxExecDelay = 0;
 };

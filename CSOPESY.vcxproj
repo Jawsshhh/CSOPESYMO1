@@ -128,10 +128,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FCFS.cpp" />
+    <ClCompile Include="Instructions.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="RoundRobin.cpp" />
     <ClCompile Include="Scheduler.cpp" />
+    <ClCompile Include="SymbolTable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FCFS.h" />
@@ -139,6 +141,7 @@
     <ClInclude Include="Process.h" />
     <ClInclude Include="RoundRobin.h" />
     <ClInclude Include="Scheduler.h" />
+    <ClInclude Include="SymbolTable.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
