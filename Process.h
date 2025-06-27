@@ -30,6 +30,9 @@ public:
     bool isFinished() const;
     void setMaxExecutionDelay(int delay);
     static std::string instructionTypeToString(Instruction::InstructionType type);
+    std::vector<std::string> getLogs() const;
+    std::string getStatus() const;
+
     SymbolTable& getSymbolTable();
 
 

@@ -7,7 +7,7 @@
 
 class ProcessHandler {
 public:
-    void insertProcess(std::shared_ptr<Process> process);
+    void insertProcess(const std::shared_ptr<Process>& process);
 
     bool deleteProcess(int processId);
 

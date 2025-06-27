@@ -1,7 +1,7 @@
 #include "ProcessHandler.h"
 #include <algorithm>
 
-void ProcessHandler::insertProcess(std::shared_ptr<Process> process) {
+void ProcessHandler::insertProcess(const std::shared_ptr<Process>& process) {
     std::lock_guard<std::mutex> lock(processMutex);
     processes.push_back(process);
 }

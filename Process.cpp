@@ -91,16 +91,19 @@ void Process::executeNextInstruction() {
 }
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
-    time_t now = time(nullptr);
-    tm local;
-    localtime_s(&local, &now);
-    std::stringstream ss;
-    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+    // Only log PRINT instructions
+    if (type == "PRINT") {
+        time_t now = time(nullptr);
+        tm local;
+        localtime_s(&local, &now);
+        std::stringstream ss;
+        ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
 
-    std::lock_guard<std::mutex> lock(fileMutex);
-    logFile << "(" << ss.str() << ") Core:" << assignedCore 
-            << " \"" << type << " " << details << "\"\n";
-    logFile.flush();
+        std::lock_guard<std::mutex> lock(fileMutex);
+        logFile << "(" << ss.str() << ") Core:" << assignedCore
+            << " \"" << details << "\"\n";
+        logFile.flush();
+    }
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
@@ -118,7 +121,27 @@ bool Process::isFinished() const
     std::lock_guard<std::mutex> lock(stateMutex);
     return isFinishedFlag || currentInstruction >= instructionList.size();
 }
+std::vector<std::string> Process::getLogs() const {
+    std::vector<std::string> logs;
+    std::string logFileName = "process_" + std::to_string(id) + ".txt";
 
+    std::lock_guard<std::mutex> lock(fileMutex);
+
+    std::ifstream logFile(logFileName);
+    if (!logFile.is_open()) {
+        return logs;  
+    }
+
+    std::string line;
+    while (std::getline(logFile, line)) {
+        logs.push_back(line);  
+    }
+
+    return logs;
+}
+std::string Process::getStatus() const {
+    return isFinished() ? "Finished!" : "Running";
+}
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {
     case Instruction::InstructionType::PRINT:    return "PRINT";

@@ -1,7 +1,7 @@
 #include "FCFS.h"
 #include <chrono>
 #include <iostream>
-FCFSScheduler::FCFSScheduler(int numCores) : Scheduler(numCores) {
+FCFSScheduler::FCFSScheduler(int numCores, int delays_per_exec) : Scheduler(numCores), delays_per_exec (delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&FCFSScheduler::workerLoop, this, i);
     }
@@ -72,7 +72,19 @@ void FCFSScheduler::workerLoop(int coreId) {
         if (process) {
             while (!process->isFinished() && running) {
                 process->executeNextInstruction();
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                auto start_time = std::chrono::high_resolution_clock::now();
+
+                process->executeNextInstruction();
+
+                while (true) {
+                    auto current_time = std::chrono::high_resolution_clock::now();
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        current_time - start_time).count();
+
+                    if (elapsed >= delays_per_exec) break;
+
+                    
+                }
             }
 
             {

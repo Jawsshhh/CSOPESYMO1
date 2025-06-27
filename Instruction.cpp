@@ -144,7 +144,6 @@ void AddInstruction::add()
 	uint16_t sum = add2 + add3;
 
 	process->getSymbolTable().updateVariable(var1, std::to_string(sum));
-	std::cout << process->getSymbolTable().retrieveValue(var1) << "\n";
 
 
 }

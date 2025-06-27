@@ -26,6 +26,9 @@ struct Config {
     int max_ins = 0;
     int delays_per_exec = 0;
     bool initialized = false;
+    std::atomic<bool> populate_running{ false };
+    std::mutex populate_mutex;
+    std::condition_variable populate_cv;
 };
 class ConsoleGeneral {
 public:
@@ -116,11 +119,22 @@ public:
         system("CLS");
     };
 
-    void addNewScreen(const std::string& name) {
+    void addNewScreen(const std::string& name, std::shared_ptr<Process> process = nullptr) {
         screenSessions[name] = make_shared<Screen>(name, 1, 100);
+        if (process) {
+            screenProcesses[name] = process;
+        }
         currentConsole = screenSessions[name];
     }
-
+    std::shared_ptr<Process> getScreenProcess(const std::string& name) {
+        if (screenProcesses.find(name) != screenProcesses.end()) {
+            return screenProcesses[name];
+        }
+        return nullptr;
+    }
+    std::map<std::string, std::shared_ptr<Process>>& getAllScreenProcesses() {
+        return screenProcesses;
+    }
     void switchConsole(const std::string& name) {
         previousConsole = currentConsole;
         currentConsole = screenSessions[name];
@@ -146,6 +160,7 @@ public:
 
 private:
     map<string, shared_ptr<ConsoleGeneral>> screenSessions;
+    map<string, shared_ptr<Process>> screenProcesses;
     shared_ptr<ConsoleGeneral> currentConsole;
     shared_ptr<ConsoleGeneral> previousConsole;
 
@@ -159,7 +174,81 @@ string trim(const string& str) {
 }
 
 
+void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
+    while (config.populate_running) {
+        // Get all screen processes
+        auto& screenProcesses = consoleManager.getAllScreenProcesses();
 
+        // Process existing screen processes
+        for (auto& screenPair : screenProcesses) {
+            if (!config.populate_running) break;
+
+            const std::string& screenName = screenPair.first;
+            std::shared_ptr<Process> process = screenPair.second;
+
+            //if (process->getInstructionCount() > 0) {
+            //    continue;
+          //  }
+
+            int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
+
+            for (int j = 0; j < numInstructions && config.populate_running; j++) {
+                int instructionType = rand() % 3;
+                switch (instructionType) {
+                case 0: {
+                    auto printInstr = make_shared<PrintInstruction>(
+                        process.get(),
+                        "Hello from " + screenName
+                    );
+                    process->addInstruction(printInstr);
+                    break;
+                }
+                case 1: {
+                    std::string varName = "var";
+                    uint16_t value = 10;
+                    auto declareInstr = make_shared<DeclareInstruction>(
+                        process.get(),
+                        varName,
+                        value
+                    );
+                    process->addInstruction(declareInstr);
+                    break;
+                }
+                case 2: {
+                    std::string destVar = "0";
+                    std::string src1 = std::to_string(rand() % 50);
+                    std::string src2 = std::to_string(rand() % 50);
+
+                    auto addInstr = make_shared<AddInstruction>(
+                        process.get(),
+                        destVar,
+                        src1,
+                        src2
+                    );
+                    process->addInstruction(addInstr);
+                    break;
+                }
+                }
+            }
+
+            if (config.populate_running) {
+                try {
+                    scheduler->addProcess(process);
+                    
+                }
+                catch (const exception& e) {
+                    
+                }
+            }
+        }
+
+        // Sleep for the configured delay or until stopped
+        unique_lock<mutex> lock(config.populate_mutex);
+        config.populate_cv.wait_for(lock,
+            chrono::seconds(config.batch_process_freq),
+            [&config] { return !config.populate_running; });
+    }
+}
 int main() {
     Config config;
     string inputCommand;
@@ -205,12 +294,11 @@ int main() {
 
                 
                 if (config.scheduler == "fcfs") {
-                   scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(config.num_cpu));
+                   scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(config.num_cpu, config.delays_per_exec));
                    scheduler->start();
                 }
                 else if (config.scheduler == "rr") {
-                   cout << "RR Created";
-                   scheduler = std::make_unique<RRScheduler>(config.num_cpu, config.quantum_cycles);
+                   scheduler = std::make_unique<RRScheduler>(config.num_cpu, config.quantum_cycles, config.delays_per_exec);
                    scheduler->start();
 
                 }
@@ -224,148 +312,137 @@ int main() {
             string name = inputCommand.substr(10);
 
             if (consoleManager.findScreenSessions(name)) {
-                // if the screen already exists
                 cout << "Screen already exists. Please type another name.\n";
             }
             else {
-                // create a new screen
-                consoleManager.addNewScreen(name);
+                static int processId = 0;
+                auto process = make_shared<Process>(name, processId++);
+
+                consoleManager.addNewScreen(name, process);
                 consoleManager.initializeScreen();
 
                 string subCommand;
                 while (getline(cin, subCommand)) {
+                    cout << "Enter command:> ";
                     if (subCommand == "exit") {
                         consoleManager.destroyScreen();
                         consoleManager.switchConsole("MAIN");
                         consoleManager.initializeScreen();
                         break;
                     }
-                    
+                    else if (subCommand == "process-smi") {
+                        cout << "Process name: " << process->getName() << "\n";
+                        cout << "ID: " << process->getId() << "\n";
+                        cout << "Messages:\n";  // Changed from "Logs:"
+
+                        auto logs = process->getLogs();
+                        for (const auto& log : logs) {
+                            cout << log << "\n";  // All logs are PRINT messages now
+                        }
+
+                        if (process->isFinished()) {
+                            cout << "Finished!\n";
+                        }
+                        else {
+                            cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
+                                << "/" << process->getInstructionCount() << "\n";
+                        }
+                    }
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
                     }
-                    cout << "Enter a command: ";
                 }
             }
-
         }
         else if (inputCommand.rfind("screen -r ", 0) == 0) {
             string name = inputCommand.substr(10);
-            if (consoleManager.findScreenSessions(name)) {
-                consoleManager.switchConsole(name);
-                consoleManager.initializeScreen();
+            auto process = consoleManager.getScreenProcess(name);
 
-                string subCommand;
-                while (getline(cin, subCommand)) {
-                    if (subCommand == "exit") {
-                        consoleManager.destroyScreen();
-                        consoleManager.switchConsole("MAIN");
-                        consoleManager.initializeScreen();
-                        break;
+            if (!process) {
+                cout << "Process " << name << " not found.\n";
+                continue;
+            }
+
+            if (process->isFinished()) {
+                cout << "Process " << name << " has finished execution.\n";
+                continue;
+            }
+
+            consoleManager.switchConsole(name);
+            consoleManager.initializeScreen();
+
+            string subCommand;
+            while (getline(cin, subCommand)) {
+                cout << "Enter command:> ";
+                if (subCommand == "exit") {
+                    consoleManager.destroyScreen();
+                    consoleManager.switchConsole("MAIN");
+                    consoleManager.initializeScreen();
+                    break;
+                }
+                else if (subCommand == "process-smi") {
+                    cout << "Process name: " << process->getName() << "\n";
+                    cout << "ID: " << process->getId() << "\n";
+                    cout << "Messages:\n";  // Changed from "Logs:"
+
+                    auto logs = process->getLogs();
+                    for (const auto& log : logs) {
+                        cout << log << "\n";  // All logs are PRINT messages now
                     }
-                    
-                    else if (subCommand == "screen -ls") {
-                        if (scheduler) {
-                            scheduler->listProcesses();
-                        }
-                        else {
-                            cout << "Error: Scheduler not initialized\n";
-                        }
+
+                    if (process->isFinished()) {
+                        cout << "Finished!\n";
                     }
                     else {
-                        cout << "Unknown screen command. Type 'exit' to return.\n";
+                        cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
+                            << "/" << process->getInstructionCount() << "\n";
                     }
-                    cout << "Enter a command: ";
                 }
-            }
-            else {
-                cout << "No session named '" << name << "' found.\n";
+                else {
+                    cout << "Unknown screen command. Type 'exit' to return.\n";
+                    
+                }
+                
             }
         }
             
         else if (inputCommand == "scheduler-start") {
-            if (!config.initialized) {  // Check both initialization and scheduler
+            if (!config.initialized) {
                 cout << "Error: System not initialized. Use 'initialize' first.\n";
                 continue;
             }
-            else if (!scheduler) {
+            if (!scheduler) {
                 cout << "Error: Scheduler not created. Use 'initialize' first.\n";
                 continue;
             }
-
-            cout << "Generating dummy processes...\n";
-
-            for (int i = 0; i < 10; i++) {
-                string processName = "dummy_" + to_string(i);
-                auto process = make_shared<Process>(processName, i);
-                process->setMaxExecutionDelay(config.delays_per_exec);
-
-                int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
-                for (int j = 0; j < numInstructions; j++) {
-                    int instructionType = rand() % 3;
-                    switch (instructionType) {
-                    case 0: {  // PRINT - Note the added braces
-                        auto printInstr = std::make_shared<PrintInstruction>(
-                            process.get(),
-                            "Hello from " + processName
-                        );
-                        process->addInstruction(printInstr);
-                        break;
-                    }
-                    case 1: {  // DECLARE - Note the added braces
-                        std::string varName = "var";
-                        uint16_t value = 10;
-                        auto declareInstr = std::make_shared<DeclareInstruction>(
-                            process.get(),
-                            varName,
-                            value
-                        );
-                        process->addInstruction(declareInstr);
-                        break;
-                    }
-                    case 2: {  // ADD
-                        std::string destVar = "0";
-                        std::string src1 = std::to_string(rand() % (j + 1));
-                        std::string src2 = std::to_string(rand() % 50);  // 50% chance of being a literal
-
-                        if (rand() % 2) {  // 50% chance to use another variable
-                            src2 = std::to_string(rand() % (j + 1));
-                        }
-
-                        auto addInstr = std::make_shared<AddInstruction>(
-                            process.get(),
-                            destVar,
-                            src1,
-                            src2
-                        );
-                        process->addInstruction(addInstr);
-                        break;
-                    }
-                    default: {  // DEFAULT - Note the added braces
-                        auto defaultInstr = std::make_shared<PrintInstruction>(
-                            process.get(),
-                            "Default instruction"
-                        );
-                        process->addInstruction(defaultInstr);
-                        break;
-                    }
-                    }
-                }
-
-                try {
-                    scheduler->addProcess(process);
-                    cout << "Added process: " << processName
-                        << " with " << numInstructions << " instructions\n";
-                }
-                catch (const exception& e) {
-                    cerr << "Failed to add process " << processName
-                        << ": " << e.what() << "\n";
-                }
+            if (config.populate_running) {
+                cout << "Process population is already running.\n";
+                continue;
             }
+
+            config.populate_running = true;
+            thread populate_thread(populateProcesses,
+                ref(config),
+                ref(consoleManager),
+                ref(scheduler));
+            populate_thread.detach();
+            cout << "Started automatic process population (frequency: "
+                << config.batch_process_freq << "ms)\n";
         }
+
         else if (inputCommand == "scheduler-stop") {
-            cout << "scheduler-stop command recognized. Doing something.\n";
-        }
+            if (!config.populate_running) {
+                cout << "Process population is not currently running.\n";
+                continue;
+            }
+
+            {
+                lock_guard<mutex> lock(config.populate_mutex);
+                config.populate_running = false;
+            }
+            config.populate_cv.notify_all();
+            cout << "Stopped automatic process population.\n";
+            }
         else if (inputCommand == "report-util") {
             cout << "report-util command recognized. Doing something.\n";
         }
