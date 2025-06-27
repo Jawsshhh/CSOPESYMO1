@@ -53,60 +53,69 @@ void RRScheduler::workerLoop(int coreId) {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
+
+            // Wait until there's work to do or we're stopping
             cv.wait(lock, [this, coreId]() {
                 return !running ||
-                    (!readyQueue.empty() && coreAvailable[coreId]) ||
+                    !readyQueue.empty() ||
                     processHandler.hasUnfinishedProcessOnCore(coreId);
                 });
 
             if (!running) break;
 
-            if (coreAvailable[coreId] && !readyQueue.empty()) {
+            // First handle sleeping processes
+            auto coreProcs = processHandler.getProcessesByCore(coreId);
+            for (auto& p : coreProcs) {
+                if (p->isSleeping()) {
+                    p->updateSleep();
+                    if (!p->isSleeping() && !p->isFinished()) {
+                        readyQueue.push(p); // Requeue awakened processes
+                        std::cout << "Process " << p->getId() << " woke up\n";
+                    }
+                }
+            }
+
+            // Get next process to execute
+            if (!readyQueue.empty()) {
                 process = readyQueue.front();
                 readyQueue.pop();
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
-                processHandler.insertProcess(process);
-            }
-            else {
-                process = processHandler.getFirstUnfinishedProcessOnCore(coreId);
             }
         }
 
         if (process) {
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
-                auto start_time = std::chrono::steady_clock::now();  // Changed to steady_clock
+                if (process->isSleeping()) {
+                    break; // Skip sleeping processes
+                }
 
                 process->executeNextInstruction();
                 cyclesUsed++;
 
-                // Proper millisecond delay
-                while (true) {
-                    auto now = std::chrono::steady_clock::now();
-                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        now - start_time).count();
-
-                    if (elapsed >= delays_per_exec) break;
-
-                    // Small sleep to prevent CPU hogging
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if (process->isSleeping()) {
+                    std::cout << "Process " << process->getId()
+                        << " started sleeping\n";
+                    break;
                 }
 
-                
+                // Add small delay between instructions
+                std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
+                    std::cout << "Process " << process->getId() << " completed\n";
                 }
-                else {
-                    readyQueue.push(process);
+                else if (!process->isSleeping()) {
+                    readyQueue.push(process); // Requeue if not finished or sleeping
                 }
                 coreAvailable[coreId] = true;
-                cv.notify_all();
             }
+            cv.notify_all();
         }
     }
 }

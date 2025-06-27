@@ -57,40 +57,54 @@ void FCFSScheduler::workerLoop(int coreId) {
 
                 auto coreProcs = processHandler.getProcessesByCore(coreId);
                 return std::any_of(coreProcs.begin(), coreProcs.end(),
-                    [](const auto& p) { return !p->isFinished(); });
+                    [](const auto& p) { return !p->isFinished() && !p->isSleeping(); });
                 });
 
             if (!running) break;
 
             auto coreProcs = processHandler.getProcessesByCore(coreId);
             auto it = std::find_if(coreProcs.begin(), coreProcs.end(),
-                [](const auto& p) { return !p->isFinished(); });
+                [](const auto& p) { return !p->isFinished() && !p->isSleeping(); });
             if (it != coreProcs.end()) {
                 process = *it;
             }
         }
 
         if (process) {
-            while (!process->isFinished() && running) {
+            // Check if process is sleeping
+            if (process->isSleeping()) {
+                process->updateSleep();
+                if (!process->isSleeping()) {
+                    // Process woke up
+                    std::lock_guard<std::mutex> lock(queueMutex);
+                    cv.notify_all();
+                }
+                continue;
+            }
+
+            while (!process->isFinished() && !process->isSleeping() && running) {
                 process->executeNextInstruction();
+
+                // Handle sleep instruction if it was just executed
+                if (process->isSleeping()) {
+                    // Process will be put to sleep, break the execution loop
+                    break;
+                }
+
                 auto start_time = std::chrono::high_resolution_clock::now();
-
-                process->executeNextInstruction();
-
                 while (true) {
                     auto current_time = std::chrono::high_resolution_clock::now();
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                         current_time - start_time).count();
-
                     if (elapsed >= delays_per_exec) break;
-
-                    
                 }
             }
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
-                process->setFinished(true);
+                if (process->isFinished()) {
+                    process->setFinished(true);
+                }
                 coreAvailable[coreId] = true;
                 cv.notify_all();
             }

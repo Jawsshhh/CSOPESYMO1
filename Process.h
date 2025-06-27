@@ -30,6 +30,10 @@ public:
     bool isFinished() const;
     void setMaxExecutionDelay(int delay);
     static std::string instructionTypeToString(Instruction::InstructionType type);
+    bool isSleeping() const;
+    void updateSleep();
+    void setSleeping(bool state, uint8_t ticks = 0);
+    int getRemainingSleepTicks() const;
     std::vector<std::string> getLogs() const;
     std::string getStatus() const;
 
@@ -49,6 +53,9 @@ private:
     int assignedCore = -1;
     int currentInstruction = 0;
     std::atomic<bool> isFinishedFlag{ false };
+    std::atomic<bool> sleeping{ false };
+    std::atomic<int> remainingSleepTicks{ 0 };
+    std::shared_ptr<SleepInstruction> currentSleepInstruction;
 
     int delayCount = 0;
     int maxExecDelay = 0;

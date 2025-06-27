@@ -199,22 +199,35 @@ std::string SubtractInstruction::getDetails() const {
 * SLEEP INSTRUCTION
 */
 
-SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP), 
-	x(x) {	
+SleepInstruction::SleepInstruction(Process* process, uint8_t x) :
+	Instruction(process, Instruction::InstructionType::SLEEP),
+	sleepTicks(x) {
 }
 
-
-void SleepInstruction::execute()
-{
+void SleepInstruction::execute() {
 	Instruction::execute();
+	sleeping = true;
+	process->setSleeping(true, sleepTicks);
+	std::cout << "DEBUG: SleepInstruction executed - ticks: " << sleepTicks << "\n";
 }
 
 std::string SleepInstruction::getDetails() const {
-	return "SLEEP for ";
+	return "SLEEP for " + std::to_string(sleepTicks) + " ticks";
 }
 
-/*
-* FOR INSTRUCTION
+bool SleepInstruction::isSleeping() const {
+	return sleeping && sleepTicks > 0;
+}
+
+void SleepInstruction::decrementSleepTicks() {
+	if (sleepTicks > 0) {
+		sleepTicks--;
+		if (sleepTicks == 0) {
+			sleeping = false;
+		}
+	}
+}
+/* FOR INSTRUCTION
 */
 ForInstruction::ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats) : Instruction(process, Instruction::InstructionType::FOR)
 {

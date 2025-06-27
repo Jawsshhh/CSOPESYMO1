@@ -93,8 +93,13 @@ public:
     SleepInstruction(Process* process, uint8_t x);
     void execute() override;
     std::string getDetails() const override;
+    bool isSleeping() const;
+    void decrementSleepTicks();
+    int getSleepTicks() const { return sleepTicks; }
+
 private:
-    uint8_t x = 0;
+    uint8_t sleepTicks;
+    std::atomic<bool> sleeping{ false };
 };
 
 class ForInstruction : public Instruction {

@@ -46,8 +46,10 @@ std::vector<std::shared_ptr<Process>> ProcessHandler::getAllProcesses() {
 std::vector<std::shared_ptr<Process>> ProcessHandler::getRunningProcesses() {
     std::lock_guard<std::mutex> lock(processMutex);
     std::vector<std::shared_ptr<Process>> running;
+    std::unordered_set<int> seenIds;
+
     for (const auto& process : processes) {
-        if (!process->isFinished()) {
+        if (!process->isFinished() && seenIds.insert(process->getId()).second) {
             running.push_back(process);
         }
     }

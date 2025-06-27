@@ -140,7 +140,31 @@ std::vector<std::string> Process::getLogs() const {
 
     return logs;
 }
+bool Process::isSleeping() const {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    return sleeping && (remainingSleepTicks > 0);
+}
 
+void Process::updateSleep() {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    if (remainingSleepTicks > 0) {
+        remainingSleepTicks--;
+        if (remainingSleepTicks == 0) {
+            sleeping = false;
+        }
+    }
+}
+
+void Process::setSleeping(bool state, uint8_t ticks) {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    sleeping = state;
+    remainingSleepTicks = ticks;
+}
+
+int Process::getRemainingSleepTicks() const {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    return remainingSleepTicks;
+}
 std::string Process::getStatus() const {
     return isFinished() ? "Finished!" : "Running";
 }
