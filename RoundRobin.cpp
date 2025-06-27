@@ -1,5 +1,6 @@
 #include "RoundRobin.h"
 #include <chrono>
+#include <iostream>
 
 RRScheduler::RRScheduler(int numCores, int quantum) : Scheduler(numCores), quantum(quantum) {
     for (int i = 0; i < numCores; ++i) {
@@ -25,21 +26,23 @@ void RRScheduler::schedulerLoop() {
 
         if (!running) break;
 
-        while (!readyQueue.empty()) {
-            int core = findAvailableCore();
-            if (core == -1) break; // No cores available
+        // Distribute processes to all available cores
+        for (int core = 0; core < numCores && !readyQueue.empty(); ++core) {
+            if (coreAvailable[core]) {
+                auto process = readyQueue.front();
+                readyQueue.pop();
 
-            auto process = readyQueue.front();
-            readyQueue.pop();
+                process->setAssignedCore(core);
+                coreAvailable[core] = false;
+                processHandler.insertProcess(process);
 
-            process->setAssignedCore(core);
-            coreAvailable[core] = false;
-            runningProcesses.push_back(process);
-            cv.notify_all();
+                
+
+                cv.notify_all();
+            }
         }
-
         lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -50,50 +53,52 @@ void RRScheduler::workerLoop(int coreId) {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             cv.wait(lock, [this, coreId]() {
-                if (!running) return true;
-
-                // Manual any_of implementation
-                for (const auto& p : runningProcesses) {
-                    if (p->getAssignedCore() == coreId && !p->isFinished()) {
-                        return true;
-                    }
-                }
-                return false;
+                return !running ||
+                    (!readyQueue.empty() && coreAvailable[coreId]) ||
+                    processHandler.hasUnfinishedProcessOnCore(coreId);
                 });
 
             if (!running) break;
 
-            // Find the process assigned to this core
-            for (auto it = runningProcesses.begin(); it != runningProcesses.end(); ++it) {
-                if ((*it)->getAssignedCore() == coreId && !(*it)->isFinished()) {
-                    process = *it;
-                    break;
-                }
+            // Get next process for this core
+            if (coreAvailable[coreId] && !readyQueue.empty()) {
+                process = readyQueue.front();
+                readyQueue.pop();
+                process->setAssignedCore(coreId);
+                coreAvailable[coreId] = false;
+                processHandler.insertProcess(process);
+
+                
+            }
+            else {
+                process = processHandler.getFirstUnfinishedProcessOnCore(coreId);
             }
         }
 
         if (process) {
-            // Process execution logic remains the same
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
                 process->executeNextInstruction();
                 cyclesUsed++;
+
+                std::cout << "[CORE " << coreId << "] PID " << process->getId()
+                    << " executing (" << cyclesUsed << "/" << quantum << ")\n";
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
-                if (!process->isFinished()) {
-                    readyQueue.push(process);
+                if (process->isFinished()) {
+                    std::cout << "[CORE " << coreId << "] PID " << process->getId()
+                        << " completed\n";
+                    processHandler.markProcessFinished(process->getId());
                 }
                 else {
-                    finishedProcesses.push_back(process);
+                    readyQueue.push(process);
+                    std::cout << "[CORE " << coreId << "] PID " << process->getId()
+                        << " requeued (RR)\n";
                 }
-
-                runningProcesses.erase(
-                    std::remove(runningProcesses.begin(), runningProcesses.end(), process),
-                    runningProcesses.end());
-
                 coreAvailable[coreId] = true;
                 cv.notify_all();
             }

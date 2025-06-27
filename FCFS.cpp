@@ -35,7 +35,7 @@ void FCFSScheduler::schedulerLoop() {
 
             process->setAssignedCore(core);
             coreAvailable[core] = false;
-            runningProcesses.push_back(process);
+            processHandler.insertProcess(process);
             cv.notify_all();
         }
 
@@ -54,28 +54,22 @@ void FCFSScheduler::workerLoop(int coreId) {
             cv.wait(lock, [this, coreId]() {
                 if (!running) return true;
 
-                // Manual any_of implementation
-                for (const auto& p : runningProcesses) {
-                    if (p->getAssignedCore() == coreId && !p->isFinished()) {
-                        return true;
-                    }
-                }
-                return false;
+                auto coreProcs = processHandler.getProcessesByCore(coreId);
+                return std::any_of(coreProcs.begin(), coreProcs.end(),
+                    [](const auto& p) { return !p->isFinished(); });
                 });
 
             if (!running) break;
 
-            // Find the process assigned to this core
-            for (auto it = runningProcesses.begin(); it != runningProcesses.end(); ++it) {
-                if ((*it)->getAssignedCore() == coreId && !(*it)->isFinished()) {
-                    process = *it;
-                    break;
-                }
+            auto coreProcs = processHandler.getProcessesByCore(coreId);
+            auto it = std::find_if(coreProcs.begin(), coreProcs.end(),
+                [](const auto& p) { return !p->isFinished(); });
+            if (it != coreProcs.end()) {
+                process = *it;
             }
         }
 
         if (process) {
-            // Process execution logic remains the same
             while (!process->isFinished() && running) {
                 process->executeNextInstruction();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -83,11 +77,7 @@ void FCFSScheduler::workerLoop(int coreId) {
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
-                finishedProcesses.push_back(process);
-                runningProcesses.erase(
-                    std::remove(runningProcesses.begin(), runningProcesses.end(), process),
-                    runningProcesses.end());
-
+                process->setFinished(true);
                 coreAvailable[coreId] = true;
                 cv.notify_all();
             }

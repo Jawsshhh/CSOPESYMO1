@@ -34,34 +34,33 @@ void Scheduler::stop() {
 }
 
 void Scheduler::listProcesses() {
-    std::lock_guard<std::mutex> lock(queueMutex);
+    std::lock_guard<std::mutex> lock(queueMutex);  // Ensure thread-safe access
 
-    runningProcesses.erase(
-        std::remove_if(runningProcesses.begin(), runningProcesses.end(),
-            [](const auto& p) { return p->isFinished(); }),
-        runningProcesses.end());
+    // Get current process states
+    auto runningProcs = processHandler.getRunningProcesses();
+    auto finishedProcs = processHandler.getFinishedProcesses();
 
     std::cout << "\n=== Process List ===\n";
     std::cout << "CPU Cores: " << numCores << " (";
-    for (bool available : coreAvailable) {
-        std::cout << (available ? "free" : "busy") << " ";
+    for (int i = 0; i < numCores; ++i) {
+        std::cout << (coreAvailable[i] ? "free" : "busy");
+        if (i != numCores - 1) std::cout << " ";
     }
     std::cout << ")\n";
 
-    std::cout << "\nRunning processes (" << runningProcesses.size() << "):\n";
-    for (const auto& process : runningProcesses) {
+    std::cout << "\nRunning processes (" << runningProcs.size() << "):\n";
+    for (const auto& process : runningProcs) {
         std::cout << "  " << process->getName()
             << " (ID: " << process->getId()
             << ") on Core: " << process->getAssignedCore()
             << "\n";
     }
 
-    std::cout << "\nFinished processes (" << finishedProcesses.size() << "):\n";
-    for (const auto& process : finishedProcesses) {
+    std::cout << "\nFinished processes (" << finishedProcs.size() << "):\n";
+    for (const auto& process : finishedProcs) {
         std::cout << "  " << process->getName()
             << " (ID: " << process->getId() << ")\n";
     }
     std::cout << "===================\n";
 }
-
 

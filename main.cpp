@@ -346,6 +346,11 @@ int main() {
         else if (inputCommand == "report-util") {
             cout << "report-util command recognized. Doing something.\n";
         }
+        else if (inputCommand == "screen -ls") {
+            if(scheduler){
+            scheduler->listProcesses();
+            }
+         }
         else if (inputCommand == "clear") {
             consoleManager.destroyScreen();
             consoleManager.switchConsole("MAIN");

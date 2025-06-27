@@ -38,11 +38,6 @@ int Process::getAssignedCore() const
     return assignedCore;
 }
 
-bool Process::isFinished() const
-{
-    return currentInstruction >= instructions.size();
-}
-
 void Process::setMaxExecutionDelay(int delay)
 {
     maxExecDelay = std::max(0, delay);
@@ -64,6 +59,7 @@ void Process::executeNextInstruction() {
     }
     
     if (currentInstruction < instructions.size()) {
+        
         const auto& instr = instructions[currentInstruction++];
 
         if (instr.rfind("PRINT", 0) == 0) {

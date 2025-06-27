@@ -1,5 +1,6 @@
 #pragma once
 #include "Process.h"
+#include "ProcessHandler.h"
 #include <vector>
 #include <memory>
 #include <thread>
@@ -28,6 +29,7 @@ protected:
     std::vector<std::shared_ptr<Process>> runningProcesses;
     std::vector<std::shared_ptr<Process>> finishedProcesses;
     std::vector<bool> coreAvailable;
+    ProcessHandler processHandler;
 
     virtual void schedulerLoop() = 0;
     virtual void workerLoop(int coreId) = 0;
