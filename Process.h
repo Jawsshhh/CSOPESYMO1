@@ -13,24 +13,16 @@
 
 class Process {
 public:
-    enum class ProcessState {
-        NEW,
-        READY,
-        RUNNING,
-        TERMINATED,
-        WAITING,
-    };
-
     Process(const std::string& name, int id);
     ~Process();
 
     std::string getName() const;
     std::string getCreationTime() const;
     int getId() const;
-    int getAssignedCore() const;
-
     void setAssignedCore(int core);
-
+    int getAssignedCore() const;
+    size_t getCurrentInstruction() const { return currentInstruction; }
+    size_t getInstructionCount() const { return instructions.size(); }
     void executeNextInstruction();
     void addInstruction(const std::string& instruction);
     void setFinished(bool finished) {
@@ -58,6 +50,6 @@ private:
     size_t currentInstruction = 0;
     std::atomic<bool> isFinishedFlag{ false };
 
-    int delayCount = 0;        
+    int delayCount = 0;
     int maxExecDelay = 0;
 };
