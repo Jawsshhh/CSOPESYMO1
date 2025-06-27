@@ -17,8 +17,6 @@ using namespace std;
 #include "FCFS.h"
 #include "RoundRobin.h"
 
-
-
 struct Config {
     int num_cpu = 0;
     std::string scheduler = "none";
