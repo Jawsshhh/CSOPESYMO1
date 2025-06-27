@@ -175,77 +175,72 @@ string trim(const string& str) {
 
 
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
+    static int processCounter = 0;  // Counter for unique process names
+
     while (config.populate_running) {
-        // Get all screen processes
-        auto& screenProcesses = consoleManager.getAllScreenProcesses();
+        // Create a new process with a unique name
+        string processName = "process_" + to_string(processCounter++);
 
-        // Process existing screen processes
-        for (auto& screenPair : screenProcesses) {
-            if (!config.populate_running) break;
+        // Create the process and screen
+        auto process = make_shared<Process>(processName, processCounter);
+        consoleManager.addNewScreen(processName, process);
 
-            const std::string& screenName = screenPair.first;
-            std::shared_ptr<Process> process = screenPair.second;
+        // Generate random number of instructions
+        int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
 
-            //if (process->getInstructionCount() > 0) {
-            //    continue;
-          //  }
-
-            int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
-
-            for (int j = 0; j < numInstructions && config.populate_running; j++) {
-                int instructionType = rand() % 3;
-                switch (instructionType) {
-                case 0: {
-                    auto printInstr = make_shared<PrintInstruction>(
-                        process.get(),
-                        "Hello from " + screenName
-                    );
-                    process->addInstruction(printInstr);
-                    break;
-                }
-                case 1: {
-                    std::string varName = "var";
-                    uint16_t value = 10;
-                    auto declareInstr = make_shared<DeclareInstruction>(
-                        process.get(),
-                        varName,
-                        value
-                    );
-                    process->addInstruction(declareInstr);
-                    break;
-                }
-                case 2: {
-                    std::string destVar = "0";
-                    std::string src1 = std::to_string(rand() % 50);
-                    std::string src2 = std::to_string(rand() % 50);
-
-                    auto addInstr = make_shared<AddInstruction>(
-                        process.get(),
-                        destVar,
-                        src1,
-                        src2
-                    );
-                    process->addInstruction(addInstr);
-                    break;
-                }
-                }
+        // Add instructions to the process
+        for (int j = 0; j < numInstructions && config.populate_running; j++) {
+            int instructionType = rand() % 3;
+            switch (instructionType) {
+            case 0: {
+                auto printInstr = make_shared<PrintInstruction>(
+                    process.get(),
+                    "Hello from " + processName
+                );
+                process->addInstruction(printInstr);
+                break;
             }
+            case 1: {
+                std::string varName = "var";
+                uint16_t value = 10;
+                auto declareInstr = make_shared<DeclareInstruction>(
+                    process.get(),
+                    varName,
+                    value
+                );
+                process->addInstruction(declareInstr);
+                break;
+            }
+            case 2: {
+                std::string destVar = "0";
+                std::string src1 = std::to_string(rand() % 50);
+                std::string src2 = std::to_string(rand() % 50);
 
-            if (config.populate_running) {
-                try {
-                    scheduler->addProcess(process);
-                    
-                }
-                catch (const exception& e) {
-                    
-                }
+                auto addInstr = make_shared<AddInstruction>(
+                    process.get(),
+                    destVar,
+                    src1,
+                    src2
+                );
+                process->addInstruction(addInstr);
+                break;
+            }
             }
         }
 
-        // Sleep for the configured delay or until stopped
+        if (config.populate_running) {
+            try {
+                scheduler->addProcess(process);
+            }
+            catch (const exception& e) {
+                // Handle exception if needed
+            }
+        }
+
+        // Wait for the configured delay or until stopped
         unique_lock<mutex> lock(config.populate_mutex);
         config.populate_cv.wait_for(lock,
-            chrono::seconds(config.batch_process_freq),
+            chrono::milliseconds(config.batch_process_freq),
             [&config] { return !config.populate_running; });
     }
 }
