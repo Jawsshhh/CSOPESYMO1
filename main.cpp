@@ -324,12 +324,12 @@ int main() {
                         break;
                     }
                     case 2: {  // ADD
-                        std::string destVar = "var" + std::to_string(j);
-                        std::string src1 = "var" + std::to_string(rand() % (j + 1));
+                        std::string destVar = std::to_string(j);
+                        std::string src1 = std::to_string(rand() % (j + 1));
                         std::string src2 = std::to_string(rand() % 50);  // 50% chance of being a literal
 
                         if (rand() % 2) {  // 50% chance to use another variable
-                            src2 = "var" + std::to_string(rand() % (j + 1));
+                            src2 = std::to_string(rand() % (j + 1));
                         }
 
                         auto addInstr = std::make_shared<AddInstruction>(
