@@ -19,6 +19,8 @@ public:
     };
 
     Instruction(Process* process, InstructionType instructionType);
+    virtual ~Instruction() = default;
+
     InstructionType getInstructionType();
     virtual void execute();
     virtual std::string getDetails() const = 0;
@@ -34,7 +36,7 @@ protected:
 
 class PrintInstruction : public Instruction {
 public:
-    PrintInstruction(Process* process, const std::string& toPrint);  // Changed parameter to const reference
+    PrintInstruction(Process* process, const std::string& toPrint);  
     void execute() override;
     std::string getDetails() const override;
 
@@ -56,15 +58,19 @@ private:
 
 class AddInstruction : public Instruction {
 public:
-    AddInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3);
+    AddInstruction(Process* process, const std::string& var1,
+        const std::string& var2, const std::string& var3);
     void execute() override;
-    uint16_t getValue(const std::string& var);
-    bool checkNumber(const std::string& var);
+    std::string getDetails() const override;
     void add();
+
 private:
-    std::string var1 = "";
-    std::string var2 = "";
-    std::string var3 = "";
+    std::string var1;
+    std::string var2;
+    std::string var3;
+
+    uint16_t getValue(const std::string& var);
+    bool checkNumber(const std::string& s);
 };
 
 class SubtractInstruction : public Instruction {

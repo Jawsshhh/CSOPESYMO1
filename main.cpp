@@ -302,7 +302,7 @@ int main() {
 
                 int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
                 for (int j = 0; j < numInstructions; j++) {
-                    int instructionType = rand() % 2;
+                    int instructionType = rand() % 3;
                     switch (instructionType) {
                     case 0: {  // PRINT - Note the added braces
                         auto printInstr = std::make_shared<PrintInstruction>(
@@ -313,14 +313,32 @@ int main() {
                         break;
                     }
                     case 1: {  // DECLARE - Note the added braces
-                        std::string varName = "var" + std::to_string(j);
-                        uint16_t value = static_cast<uint16_t>(rand() % 100);
+                        std::string varName = "var";
+                        uint16_t value = 10;
                         auto declareInstr = std::make_shared<DeclareInstruction>(
                             process.get(),
                             varName,
                             value
                         );
                         process->addInstruction(declareInstr);
+                        break;
+                    }
+                    case 2: {  // ADD
+                        std::string destVar = "var" + std::to_string(j);
+                        std::string src1 = "var" + std::to_string(rand() % (j + 1));
+                        std::string src2 = std::to_string(rand() % 50);  // 50% chance of being a literal
+
+                        if (rand() % 2) {  // 50% chance to use another variable
+                            src2 = "var" + std::to_string(rand() % (j + 1));
+                        }
+
+                        auto addInstr = std::make_shared<AddInstruction>(
+                            process.get(),
+                            destVar,
+                            src1,
+                            src2
+                        );
+                        process->addInstruction(addInstr);
                         break;
                     }
                     default: {  // DEFAULT - Note the added braces

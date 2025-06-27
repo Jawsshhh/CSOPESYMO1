@@ -77,16 +77,15 @@ bool DeclareInstruction::performDeclaration() {
 std::string DeclareInstruction::getDetails() const {
 	return "Declared variable: " + varName + " with value: " + std::to_string(value);
 }
+
 /*
 * ADD INSTRUCTION: performs an addition operation var 1 = var2/value + var3/value
 * var1, var2, var3 are variables. Variables are automatically declared with a value of 0 if they have not been declared beforehand. Can also add a uint16 value.
 */
-
-AddInstruction::AddInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3) : Instruction(process, Instruction::InstructionType::ADD)
-{
-	this->var1 = var1;
-	this->var2 = var2;
-	this->var3 = var3;
+AddInstruction::AddInstruction(Process* process, const std::string& var1,
+	const std::string& var2, const std::string& var3)
+	: Instruction(process, InstructionType::ADD),
+	var1(var1), var2(var2), var3(var3) {
 }
 
 void AddInstruction::execute()
@@ -124,6 +123,9 @@ uint16_t AddInstruction::getValue(const std::string& var)
 	}
 
 	
+}
+std::string AddInstruction::getDetails() const {
+	return "ADD " + var1 + " = " + var2 + " + " + var3;
 }
 
 bool AddInstruction::checkNumber(const std::string& var)
