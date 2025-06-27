@@ -1,6 +1,7 @@
 #include "Instruction.h"
 #include "Process.h"
 #include "ProcessHandler.h"
+#include <iostream>
 
 Instruction::Instruction(Process* process, InstructionType instructionType)
 {
@@ -90,6 +91,8 @@ AddInstruction::AddInstruction(Process* process, const std::string& var1,
 
 void AddInstruction::execute()
 {
+	DeclareInstruction decl(process, var1, 0);
+	decl.execute();
 	Instruction::execute();
 	AddInstruction::add();
 
@@ -125,7 +128,7 @@ uint16_t AddInstruction::getValue(const std::string& var)
 	
 }
 std::string AddInstruction::getDetails() const {
-	return "ADD " + var1 + " = " + var2 + " + " + var3;
+	return "ADD " + process->getSymbolTable().retrieveValue(var1) + " = " + var2 + " + " + var3;
 }
 
 bool AddInstruction::checkNumber(const std::string& var)
@@ -141,6 +144,8 @@ void AddInstruction::add()
 	uint16_t sum = add2 + add3;
 
 	process->getSymbolTable().updateVariable(var1, std::to_string(sum));
+	std::cout << process->getSymbolTable().retrieveValue(var1) << "\n";
+
 
 }
 

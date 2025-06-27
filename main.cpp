@@ -324,7 +324,7 @@ int main() {
                         break;
                     }
                     case 2: {  // ADD
-                        std::string destVar = std::to_string(j);
+                        std::string destVar = "0";
                         std::string src1 = std::to_string(rand() % (j + 1));
                         std::string src2 = std::to_string(rand() % 50);  // 50% chance of being a literal
 

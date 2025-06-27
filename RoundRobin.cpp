@@ -81,8 +81,8 @@ void RRScheduler::workerLoop(int coreId) {
                 process->executeNextInstruction();
                 cyclesUsed++;
 
-                std::cout << "[CORE " << coreId << "] PID " << process->getId()
-                    << " executing (" << cyclesUsed << "/" << quantum << ")\n";
+                
+
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -90,14 +90,12 @@ void RRScheduler::workerLoop(int coreId) {
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
-                    std::cout << "[CORE " << coreId << "] PID " << process->getId()
-                        << " completed\n";
+                    
                     processHandler.markProcessFinished(process->getId());
                 }
                 else {
                     readyQueue.push(process);
-                    std::cout << "[CORE " << coreId << "] PID " << process->getId()
-                        << " requeued (RR)\n";
+                    
                 }
                 coreAvailable[coreId] = true;
                 cv.notify_all();
