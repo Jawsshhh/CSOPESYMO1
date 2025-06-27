@@ -21,18 +21,13 @@ public:
     int getId() const;
     void setAssignedCore(int core);
     int getAssignedCore() const;
-    size_t getCurrentInstruction() const { return currentInstruction; }
-    size_t getInstructionCount() const { return instructionList.size(); }
+    int getCurrentInstructionIndex() const;
+    size_t getInstructionCount() const;
+
     void executeNextInstruction();
-    void addInstruction(const std::string& instruction);
-    void setFinished(bool finished) {
-        std::lock_guard<std::mutex> lock(stateMutex);
-        isFinishedFlag = finished;
-    }
-    bool isFinished() const {
-        std::lock_guard<std::mutex> lock(stateMutex);
-        return isFinishedFlag || currentInstruction >= instructionList.size();
-    }
+    void addInstruction(Instruction instruction);
+    void setFinished(bool finished);
+    bool isFinished() const;
     void setMaxExecutionDelay(int delay);
 
     SymbolTable& getSymbolTable();
@@ -40,7 +35,7 @@ public:
 
 private:
     SymbolTable symbolTable;
-    std::vector<Instruction> instructionList;
+    std::vector<std::shared_ptr<Instruction>> instructionList;
     static std::mutex fileMutex;
     void logInstruction(const std::string& type, const std::string& details);
     mutable std::mutex stateMutex;
@@ -49,7 +44,7 @@ private:
     std::string creationTime;
     std::ofstream logFile;
     int assignedCore = -1;
-    size_t currentInstruction = 0;
+    int currentInstruction = 0;
     std::atomic<bool> isFinishedFlag{ false };
 
     int delayCount = 0;

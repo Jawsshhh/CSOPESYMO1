@@ -1,4 +1,5 @@
 #include "Process.h"
+#include "Instruction.h"
 #include <iostream>
 
 std::mutex Process::fileMutex;
@@ -38,12 +39,22 @@ int Process::getAssignedCore() const
     return assignedCore;
 }
 
+int Process::getCurrentInstructionIndex() const
+{
+    return currentInstruction;
+}
+
+size_t Process::getInstructionCount() const
+{
+    return instructionList.size();
+}
+
 void Process::setMaxExecutionDelay(int delay)
 {
     maxExecDelay = std::max(0, delay);
 }
 
-SymbolTable Process::getSymbolTable() const
+SymbolTable& Process::getSymbolTable()
 {
     return symbolTable;
 }
@@ -63,21 +74,27 @@ void Process::executeNextInstruction() {
         return;
     }
     
-    if (currentInstruction < instructions.size()) {
+    if (currentInstruction < instructionList.size()) {
         
-        const auto& instr = instructions[currentInstruction++];
+        Instruction instr = instructionList[currentInstruction++];
 
-        if (instr.rfind("PRINT", 0) == 0) {
-            logInstruction("PRINT", instr.substr(instr.find('"') + 1, instr.find_last_of('"') - instr.find('"') - 1));
+        if (instr.getInstructionType() == Instruction::InstructionType::PRINT) {
+            logInstruction("PRINT", instr.);
         }
-        else if (instr.rfind("DECLARE", 0) == 0) {
+        else if (instr.getInstructionType() == Instruction::InstructionType::DECLARE) {
             logInstruction("DECLARE", instr.substr(8));
         }
-        else if (instr.rfind("ADD", 0) == 0) {
+        else if (instr.getInstructionType() == Instruction::InstructionType::ADD) {
             logInstruction("ADD", instr.substr(4));
         }
-        else if (instr.rfind("SLEEP", 0) == 0) {
+        else if (instr.getInstructionType() == Instruction::InstructionType::SUBTRACT) {
+            logInstruction("SUBTRACT", instr.substr(6));
+        }
+        else if (instr.getInstructionType() == Instruction::InstructionType::SLEEP) {
             logInstruction("SLEEP", instr.substr(6));
+        }
+        else if (instr.getInstructionType() == Instruction::InstructionType::FOR) {
+            logInstruction("FOR", instr.substr(6));
         }
         delayCount = maxExecDelay;
     }
@@ -96,6 +113,18 @@ void Process::logInstruction(const std::string& type, const std::string& details
     logFile.flush();
 }
 
-void Process::addInstruction(const std::string& instruction) {
-    instructions.push_back(instruction);
+void Process::addInstruction(Instruction instruction) {
+    instructionList.push_back(instruction);
+}
+
+void Process::setFinished(bool finished)
+{
+     std::lock_guard<std::mutex> lock(stateMutex);
+     isFinishedFlag = finished;
+}
+
+bool Process::isFinished() const
+{
+    std::lock_guard<std::mutex> lock(stateMutex);
+    return isFinishedFlag || currentInstruction >= instructionList.size();
 }
