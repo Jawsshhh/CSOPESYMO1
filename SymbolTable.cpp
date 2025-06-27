@@ -60,7 +60,6 @@ bool SymbolTable::updateVariable(const std::string& varName, const std::string& 
     return false;
 }
 
-const std::unordered_map<std::string, SymbolTable::ST> SymbolTable::getSymbolTable()
-{
+const std::unordered_map<std::string, SymbolTable::ST>& SymbolTable::getSymbolTable() const {
     return symbolTable;
 }

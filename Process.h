@@ -25,11 +25,11 @@ public:
     size_t getInstructionCount() const;
 
     void executeNextInstruction();
-    void addInstruction(Instruction instruction);
+    void addInstruction(std::shared_ptr<Instruction> instruction);
     void setFinished(bool finished);
     bool isFinished() const;
     void setMaxExecutionDelay(int delay);
-
+    static std::string instructionTypeToString(Instruction::InstructionType type);
     SymbolTable& getSymbolTable();
 
 

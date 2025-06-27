@@ -18,36 +18,40 @@ void Instruction::execute()
 
 }
 
-/*
-* PRINT INSTRUCTION: display an output "msg" to the console. The output can only be seen when the user is inside its attached screen.
-*/
 
-PrintInstruction::PrintInstruction(Process* process, std::string& toPrint) : Instruction(process, Instruction::InstructionType::PRINT)
+
+PrintInstruction::PrintInstruction(Process* process, const std::string& toPrint)
+	: Instruction(process, Instruction::InstructionType::PRINT),
+	toPrint(toPrint)
 {
-	this->toPrint = toPrint;
 }
 
-void PrintInstruction::execute()
-{
+void PrintInstruction::execute() {
 	Instruction::execute();
 	std::stringstream msg;
 
-	//checking if the string passed is a name of a variable, if it is, then print "Value from [varName]: [value]"
 	if (process->getSymbolTable().checkVarExists(toPrint)) {
-		toPrint = "Value from " + toPrint + ": " + process->getSymbolTable().retrieveValue(toPrint);
+		msg << "Value from " << toPrint << ": "
+			<< process->getSymbolTable().retrieveValue(toPrint) << std::endl;
+	}
+	else {
+		msg << toPrint << std::endl;
 	}
 
-	msg << toPrint << std::endl;
+}
+std::string PrintInstruction::getDetails() const {
+	return "Message: " + toPrint;
 }
 
 /*
 * DECLARE INSTRUCTION: declares a uint16 with a variable name "var", and a default "value"
 */
 
-DeclareInstruction::DeclareInstruction(Process* process, const std::string& varName, uint16_t value) : Instruction(process, Instruction::InstructionType::DECLARE)
+DeclareInstruction::DeclareInstruction(Process* process, const std::string& varName, uint16_t value)
+	: Instruction(process, Instruction::InstructionType::DECLARE),
+	varName(varName),
+	value(value)  // Direct initialization of uint16_t
 {
-	this->varName = varName;
-	this->value = value;
 }
 
 void DeclareInstruction::execute()
@@ -59,20 +63,20 @@ void DeclareInstruction::execute()
 
 }
 
-bool DeclareInstruction::performDeclaration()
-{
+bool DeclareInstruction::performDeclaration() {
 	if (!process->getSymbolTable().checkVarExists(varName)) {
-		//if the variable does not exist
-		process->getSymbolTable().insertVariable(varName, SymbolTable::DataType::INTEGER, value);
+		process->getSymbolTable().insertVariable(
+			varName,
+			SymbolTable::DataType::INTEGER,
+			std::to_string(value)  // Convert uint16_t to string for storage
+		);
 		return true;
 	}
-	else {
-		// if the variable does exist in the symbol table, declaration is not possible
-		return false;
-	}
-
+	return false;
 }
-
+std::string DeclareInstruction::getDetails() const {
+	return "Declared variable: " + varName + " with value: " + std::to_string(value);
+}
 /*
 * ADD INSTRUCTION: performs an addition operation var 1 = var2/value + var3/value
 * var1, var2, var3 are variables. Variables are automatically declared with a value of 0 if they have not been declared beforehand. Can also add a uint16 value.

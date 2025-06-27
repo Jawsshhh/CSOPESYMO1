@@ -240,14 +240,7 @@ int main() {
                         consoleManager.initializeScreen();
                         break;
                     }
-                    else if (subCommand == "print") {
-                        for (int i = 0; i < 10; ++i) {
-                           // scheduler.addProcess(std::make_shared<Process>(name, i));
-                        }
-                    }
-                    else if (subCommand == "screen -ls") {
-                      //  scheduler.listProcesses();
-                    }
+                    
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
                     }
@@ -309,23 +302,35 @@ int main() {
 
                 int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
                 for (int j = 0; j < numInstructions; j++) {
-                    int instructionType = rand() % 4;
+                    int instructionType = rand() % 2;
                     switch (instructionType) {
-                    case 0:  // PRINT
-                        process->addInstruction("PRINT \"Hello from " + processName + "\"");
+                    case 0: {  // PRINT - Note the added braces
+                        auto printInstr = std::make_shared<PrintInstruction>(
+                            process.get(),
+                            "Hello from " + processName
+                        );
+                        process->addInstruction(printInstr);
                         break;
-                    case 1:  // DECLARE
-                        process->addInstruction("DECLARE var" + to_string(j) + " " + to_string(rand() % 100));
+                    }
+                    case 1: {  // DECLARE - Note the added braces
+                        std::string varName = "var" + std::to_string(j);
+                        uint16_t value = static_cast<uint16_t>(rand() % 100);
+                        auto declareInstr = std::make_shared<DeclareInstruction>(
+                            process.get(),
+                            varName,
+                            value
+                        );
+                        process->addInstruction(declareInstr);
                         break;
-                    case 2:  // ADD
-                        process->addInstruction("ADD result var" + to_string(j) + " " + to_string(rand() % 50));
+                    }
+                    default: {  // DEFAULT - Note the added braces
+                        auto defaultInstr = std::make_shared<PrintInstruction>(
+                            process.get(),
+                            "Default instruction"
+                        );
+                        process->addInstruction(defaultInstr);
                         break;
-                    case 3:  // SLEEP
-                        process->addInstruction("SLEEP " + to_string(1 + rand() % 5));
-                        break;
-                    default:
-                        process->addInstruction("PRINT \"Default instruction\"");
-                        break;
+                    }
                     }
                 }
 

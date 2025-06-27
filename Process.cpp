@@ -73,29 +73,19 @@ void Process::executeNextInstruction() {
         delayCount--;
         return;
     }
-    
-    if (currentInstruction < instructionList.size()) {
-        
-        Instruction instr = instructionList[currentInstruction++];
 
-        if (instr.getInstructionType() == Instruction::InstructionType::PRINT) {
-            logInstruction("PRINT", instr.);
-        }
-        else if (instr.getInstructionType() == Instruction::InstructionType::DECLARE) {
-            logInstruction("DECLARE", instr.substr(8));
-        }
-        else if (instr.getInstructionType() == Instruction::InstructionType::ADD) {
-            logInstruction("ADD", instr.substr(4));
-        }
-        else if (instr.getInstructionType() == Instruction::InstructionType::SUBTRACT) {
-            logInstruction("SUBTRACT", instr.substr(6));
-        }
-        else if (instr.getInstructionType() == Instruction::InstructionType::SLEEP) {
-            logInstruction("SLEEP", instr.substr(6));
-        }
-        else if (instr.getInstructionType() == Instruction::InstructionType::FOR) {
-            logInstruction("FOR", instr.substr(6));
-        }
+    if (currentInstruction < static_cast<int>(instructionList.size())) {
+        auto instr = instructionList[currentInstruction++];
+
+        // Execute first to ensure any state changes happen
+        instr->execute();
+
+        // Log after execution with full details
+        logInstruction(
+            instructionTypeToString(instr->getInstructionType()),
+            instr->getDetails()
+        );
+
         delayCount = maxExecDelay;
     }
 }
@@ -113,7 +103,7 @@ void Process::logInstruction(const std::string& type, const std::string& details
     logFile.flush();
 }
 
-void Process::addInstruction(Instruction instruction) {
+void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
     instructionList.push_back(instruction);
 }
 
@@ -127,4 +117,16 @@ bool Process::isFinished() const
 {
     std::lock_guard<std::mutex> lock(stateMutex);
     return isFinishedFlag || currentInstruction >= instructionList.size();
+}
+
+std::string Process::instructionTypeToString(Instruction::InstructionType type) {
+    switch (type) {
+    case Instruction::InstructionType::PRINT:    return "PRINT";
+    case Instruction::InstructionType::DECLARE:  return "DECLARE";
+    case Instruction::InstructionType::ADD:      return "ADD";
+    case Instruction::InstructionType::SUBTRACT: return "SUBTRACT";
+    case Instruction::InstructionType::SLEEP:    return "SLEEP";
+    case Instruction::InstructionType::FOR:      return "FOR";
+    default: return "UNKNOWN";
+    }
 }

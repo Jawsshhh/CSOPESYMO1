@@ -25,6 +25,7 @@ public:
     bool insertVariable(const std::string& varName, DataType dataType, const std::string& value);
     bool removeVariable(const std::string& varName);
     bool updateVariable(const std::string& varName, const std::string& value);
+    const std::unordered_map<std::string, ST>& getSymbolTable() const;
 private:
     std::unordered_map<std::string, ST> symbolTable;
 };

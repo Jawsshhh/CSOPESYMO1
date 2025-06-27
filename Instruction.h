@@ -3,6 +3,9 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
+#include <memory>
+
+class Process;
 
 class Instruction {
 public:
@@ -18,6 +21,7 @@ public:
     Instruction(Process* process, InstructionType instructionType);
     InstructionType getInstructionType();
     virtual void execute();
+    virtual std::string getDetails() const = 0;
 
 
 protected:
@@ -30,8 +34,10 @@ protected:
 
 class PrintInstruction : public Instruction {
 public:
-    PrintInstruction(Process* process, std::string& toPrint);
+    PrintInstruction(Process* process, const std::string& toPrint);  // Changed parameter to const reference
     void execute() override;
+    std::string getDetails() const override;
+
 private:
     std::string toPrint;
 };
@@ -40,10 +46,12 @@ class DeclareInstruction : public Instruction {
 public:
     DeclareInstruction(Process* process, const std::string& varName, uint16_t value);
     void execute() override;
+    std::string getDetails() const override;  // Add this line
     bool performDeclaration();
+
 private:
     std::string varName;
-    std::string value;
+    uint16_t value;  // Changed from std::string to uint16_t to match constructor
 };
 
 class AddInstruction : public Instruction {
