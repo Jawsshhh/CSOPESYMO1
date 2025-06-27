@@ -353,15 +353,12 @@ int main() {
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
 
-            if (!process) {
+            if (!process || process->isFinished()) {
                 cout << "Process " << name << " not found.\n";
                 continue;
             }
 
-            if (process->isFinished()) {
-                cout << "Process " << name << " has finished execution.\n";
-                continue;
-            }
+           
 
             consoleManager.switchConsole(name);
             consoleManager.initializeScreen();
