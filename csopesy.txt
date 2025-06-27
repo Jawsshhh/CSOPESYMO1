@@ -1,0 +1,7 @@
+=== Process Report ===
+CPU Cores: 4 (free free free free )
+
+Running processes (0):
+
+Finished processes (0):
+=======================

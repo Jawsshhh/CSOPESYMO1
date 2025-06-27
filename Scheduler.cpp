@@ -64,3 +64,46 @@ void Scheduler::listProcesses() {
     std::cout << "===================\n";
 }
 
+void Scheduler::generateReport(const std::string& filename) {
+    std::lock_guard<std::mutex> lock(queueMutex);
+
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
+        return;
+    }
+
+    // Clean up finished processes list
+    runningProcesses.erase(
+        std::remove_if(runningProcesses.begin(), runningProcesses.end(),
+            [](const auto& p) { return p->isFinished(); }),
+        runningProcesses.end());
+
+    outFile << "=== Process Report ===\n";
+    outFile << "CPU Cores: " << numCores << " (";
+    for (bool available : coreAvailable) {
+        outFile << (available ? "free" : "busy") << " ";
+    }
+    outFile << ")\n\n";
+
+    outFile << "Running processes (" << runningProcesses.size() << "):\n";
+    for (const auto& process : runningProcesses) {
+        outFile << "  " << process->getName()
+            << " (ID: " << process->getId() << ")  "
+            << "(" << process->getCreationTime() << ")  "
+            << "on Core: " << process->getAssignedCore()
+            << "  " << process->getCurrentInstructionIndex()
+            << "/" << process->getInstructionCount()
+            << "\n";
+    }
+
+    outFile << "\nFinished processes (" << finishedProcesses.size() << "):\n";
+    for (const auto& process : finishedProcesses) {
+        outFile << "  " << process->getName()
+            << " (ID: " << process->getId() << ")\n";
+    }
+
+    outFile << "=======================\n";
+
+    outFile.close();
+}

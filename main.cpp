@@ -436,8 +436,15 @@ int main() {
             cout << "Stopped automatic process population.\n";
             }
         else if (inputCommand == "report-util") {
-            
-        }
+            if (!scheduler) {
+                std::cout << "Error: Scheduler not initialized.\n";
+            }
+            else {
+                scheduler->generateReport("csopesy.txt");
+                std::cout << "Report generated to csopesy.txt!\n";  // Can replace csopesy.txt to filepath
+            }
+         }
+
         else if (inputCommand == "screen -ls") {
             if(scheduler){
                 scheduler->listProcesses();
