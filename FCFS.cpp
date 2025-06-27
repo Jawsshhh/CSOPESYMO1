@@ -1,4 +1,5 @@
 #include "FCFS.h"
+#include "Instruction.h"
 #include <chrono>
 #include <iostream>
 FCFSScheduler::FCFSScheduler(int numCores, int delays_per_exec) : Scheduler(numCores), delays_per_exec (delays_per_exec) {

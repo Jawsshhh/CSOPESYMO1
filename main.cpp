@@ -190,12 +190,12 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 3;
+            int instructionType = rand() % 4;
             switch (instructionType) {
             case 0: {
                 auto printInstr = make_shared<PrintInstruction>(
                     process.get(),
-                    "Hello from " + processName
+                    "Hello world from " + processName
                 );
                 process->addInstruction(printInstr);
                 break;
@@ -212,7 +212,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 break;
             }
             case 2: {
-                std::string destVar = "0";
+                std::string destVar = "var1";
                 std::string src1 = std::to_string(rand() % 50);
                 std::string src2 = std::to_string(rand() % 50);
 
@@ -225,9 +225,34 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 process->addInstruction(addInstr);
                 break;
             }
-            }
-        }
+            case 3: {
+                std::string destVar = "var1";
+                std::string src1 = std::to_string(rand() % 50);
+                std::string src2 = std::to_string(rand() % 50);
 
+                auto subInstr = make_shared<SubtractInstruction>(
+                    process.get(),
+                    destVar,
+                    src1,
+                    src2
+                );
+                process->addInstruction(subInstr);
+                break;
+            }
+            case 4: {
+                uint8_t x = 1 + rand() % 10;
+
+                auto sleepInstr = make_shared<SleepInstruction>(
+                    process.get(),
+                    x
+                );
+                process->addInstruction(sleepInstr);
+                break;
+            }
+            }
+            
+        }
+        
         if (config.populate_running) {
             try {
                 scheduler->addProcess(process);
@@ -254,6 +279,8 @@ int main() {
     int cpuTick = 0;
 
     while (true) {
+        cpuTick++;
+
         cout << "Enter a command: ";
 
         getline(cin, inputCommand);
@@ -458,6 +485,7 @@ int main() {
         else if (inputCommand == "exit") {
             if (scheduler) {
                 scheduler->stop();
+
             }
 
             cout << "Exiting the program.\n";

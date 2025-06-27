@@ -76,7 +76,7 @@ bool DeclareInstruction::performDeclaration() {
 	return false;
 }
 std::string DeclareInstruction::getDetails() const {
-	return "Declared variable: " + varName + " with value: " + std::to_string(value);
+	return "Declared variable: " + varName + " with value: " + process->getSymbolTable().retrieveValue(varName);
 }
 
 /*
@@ -91,39 +91,26 @@ AddInstruction::AddInstruction(Process* process, const std::string& var1,
 
 void AddInstruction::execute()
 {
-	DeclareInstruction decl(process, var1, 0);
-	decl.execute();
 	Instruction::execute();
-	AddInstruction::add();
+	add();
 
 	//DEBUG STATEMENT
 }
 
 uint16_t AddInstruction::getValue(const std::string& var)
 {
-	// if var is a number
+	//check if the var is a number
 	if (checkNumber(var)) {
-		//convert variable to uint16_t
 		return static_cast<uint16_t>(std::stoi(var));
 	}
-	else {
-		
-		if (process->getSymbolTable().checkVarExists(var) && process->getSymbolTable().retrieveDataType(var) == SymbolTable::DataType::INTEGER) {
-			// if var is an existing variable, and it is an integer
-			return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
-		}
-		else if (process->getSymbolTable().checkVarExists(var) && !(process->getSymbolTable().retrieveDataType(var) == SymbolTable::DataType::INTEGER)) {
-			// if var is an existing variable, but it is not an integer
-		}
-		else {
-			// if var does not exist, declare it and set the value as 0
-			DeclareInstruction decl(process, var, 0);
-			decl.execute();
-			
-			return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
-		}
-
+	
+	//if its not a number, and it doesn't exist, declare it as 
+	if (!process->getSymbolTable().checkVarExists(var)) {
+		DeclareInstruction decl(process, var, 0); 
+		decl.execute();
 	}
+
+	return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
 
 	
 }
@@ -139,54 +126,49 @@ bool AddInstruction::checkNumber(const std::string& var)
 
 void AddInstruction::add()
 {
-	uint16_t add2 = getValue(var2);
-	uint16_t add3 = getValue(var3);
+	if (!process->getSymbolTable().checkVarExists(var1)) {
+		DeclareInstruction decl(process, var1, 0);
+		decl.execute();
+	}
 
-	uint16_t sum = add2 + add3;
+	uint16_t val2 = getValue(var2);
+	uint16_t val3 = getValue(var3);
 
-	process->getSymbolTable().updateVariable(var1, std::to_string(sum));
+	uint16_t result = val2 + val3;
 
+	process->getSymbolTable().updateVariable(var1, std::to_string(result));
 
 }
+/*
+* SUBTRACT INSTRUCTION:
+*/
 
-SubtractInstruction::SubtractInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3) : Instruction(process, Instruction::InstructionType::SUBTRACT)
-{
-	this->var1 = var1;
-	this->var2 = var2;
-	this->var3 = var3;
+SubtractInstruction::SubtractInstruction(Process* process, const std::string& var1,
+	const std::string& var2, const std::string& var3)
+	: Instruction(process, InstructionType::SUBTRACT),
+	var1(var1), var2(var2), var3(var3) {
 }
 
 void SubtractInstruction::execute()
 {
 	Instruction::execute();
-	SubtractInstruction::subtract();
+	subtract();
 }
 
 uint16_t SubtractInstruction::getValue(const std::string& var)
 {
-	// if var is a number
+	//check if the var is a number
 	if (checkNumber(var)) {
-		//convert variable to uint16_t
 		return static_cast<uint16_t>(std::stoi(var));
 	}
-	else {
 
-		if (process->getSymbolTable().checkVarExists(var) && process->getSymbolTable().retrieveDataType(var) == SymbolTable::DataType::INTEGER) {
-			// if var is an existing variable, and it is an integer
-			return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
-		}
-		else if (process->getSymbolTable().checkVarExists(var) && !(process->getSymbolTable().retrieveDataType(var) == SymbolTable::DataType::INTEGER)) {
-			// if var is an existing variable, but it is not an integer
-		}
-		else {
-			// if var does not exist, declare it and set the value as 0
-			DeclareInstruction decl(process, var, 0);
-			decl.execute();
-
-			return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
-		}
-
+	//if its not a number, and it doesn't exist, declare it as 
+	if (!process->getSymbolTable().checkVarExists(var)) {
+		DeclareInstruction decl(process, var, 0);
+		decl.execute();
 	}
+
+	return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(var)));
 }
 
 bool SubtractInstruction::checkNumber(const std::string& var)
@@ -196,17 +178,29 @@ bool SubtractInstruction::checkNumber(const std::string& var)
 
 void SubtractInstruction::subtract()
 {
-	uint16_t add2 = getValue(var2);
-	uint16_t add3 = getValue(var3);
+	if (!process->getSymbolTable().checkVarExists(var1)) {
+		DeclareInstruction decl(process, var1, 0);
+		decl.execute();
+	}
 
-	uint16_t difference = add2 - add3;
+	uint16_t val2 = getValue(var2);
+	uint16_t val3 = getValue(var3);
 
-	process->getSymbolTable().updateVariable(var1, std::to_string(difference));
+	uint16_t result = val2 - val3;
+
+	process->getSymbolTable().updateVariable(var1, std::to_string(result));
 }
 
-SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP)
-{
+std::string SubtractInstruction::getDetails() const {
+	return "SUB " + process->getSymbolTable().retrieveValue(var1) + " = " + var2 + " - " + var3;
+}
 
+/*
+* SLEEP INSTRUCTION
+*/
+
+SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP), 
+	x(x) {	
 }
 
 
@@ -215,6 +209,13 @@ void SleepInstruction::execute()
 	Instruction::execute();
 }
 
+std::string SleepInstruction::getDetails() const {
+	return "SLEEP for ";
+}
+
+/*
+* FOR INSTRUCTION
+*/
 ForInstruction::ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats) : Instruction(process, Instruction::InstructionType::FOR)
 {
 }

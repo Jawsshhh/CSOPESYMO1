@@ -48,12 +48,12 @@ class DeclareInstruction : public Instruction {
 public:
     DeclareInstruction(Process* process, const std::string& varName, uint16_t value);
     void execute() override;
-    std::string getDetails() const override;  // Add this line
+    std::string getDetails() const override;
     bool performDeclaration();
 
 private:
     std::string varName;
-    uint16_t value;  // Changed from std::string to uint16_t to match constructor
+    uint16_t value;
 };
 
 class AddInstruction : public Instruction {
@@ -77,21 +77,24 @@ class SubtractInstruction : public Instruction {
 public:
     SubtractInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
-    uint16_t getValue(const std::string& var);
-    bool checkNumber(const std::string& var);
+    std::string getDetails() const override;
     void subtract();
 private:
     std::string var1;
     std::string var2;
     std::string var3;
+
+    uint16_t getValue(const std::string& var);
+    bool checkNumber(const std::string& var);
 };
 
 class SleepInstruction : public Instruction {
 public:
     SleepInstruction(Process* process, uint8_t x);
     void execute() override;
+    std::string getDetails() const override;
 private:
-    uint8_t x;
+    uint8_t x = 0;
 };
 
 class ForInstruction : public Instruction {
