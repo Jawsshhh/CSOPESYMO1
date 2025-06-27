@@ -43,6 +43,11 @@ void Process::setMaxExecutionDelay(int delay)
     maxExecDelay = std::max(0, delay);
 }
 
+SymbolTable Process::getSymbolTable() const
+{
+    return symbolTable;
+}
+
 std::string Process::getName() const {
     return name;
 }

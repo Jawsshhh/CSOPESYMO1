@@ -17,6 +17,13 @@ std::string SymbolTable::retrieveValue(const std::string& varName)
     return "";
 }
 
+SymbolTable::DataType SymbolTable::retrieveDataType(const std::string& varName)
+{
+    if (checkVarExists(varName)) {
+        return symbolTable.at(varName).dataType;
+    }
+}
+
 bool SymbolTable::insertVariable(const std::string& varName, DataType dataType, const std::string& value)
 {
     //if the variable doesn't exist, insert new variable
@@ -51,4 +58,9 @@ bool SymbolTable::updateVariable(const std::string& varName, const std::string& 
         return true;
     }
     return false;
+}
+
+const std::unordered_map<std::string, SymbolTable::ST> SymbolTable::getSymbolTable()
+{
+    return symbolTable;
 }

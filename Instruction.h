@@ -15,13 +15,13 @@ public:
         FOR
     };
 
-    Instruction(int pid, InstructionType instructionType);
+    Instruction(Process* process, InstructionType instructionType);
     InstructionType getInstructionType();
     virtual void execute();
 
 
 protected:
-    int pid;
+    Process* process;
     InstructionType instructionType;
     std::vector<std::string> args;               // arguments: var names or values
     std::vector<Instruction> body;               // for FOR loops
@@ -30,7 +30,7 @@ protected:
 
 class PrintInstruction : public Instruction {
 public:
-    PrintInstruction(int pid, std::string& toPrint);
+    PrintInstruction(Process* process, std::string& toPrint);
     void execute() override;
 private:
     std::string toPrint;
@@ -38,9 +38,9 @@ private:
 
 class DeclareInstruction : public Instruction {
 public:
-    DeclareInstruction(int pid, std::string& varName, uint16_t value);
+    DeclareInstruction(Process* process, const std::string& varName, uint16_t value);
     void execute() override;
-    void performDeclaration();
+    bool performDeclaration();
 private:
     std::string varName;
     std::string value;
@@ -48,11 +48,11 @@ private:
 
 class AddInstruction : public Instruction {
 public:
-    AddInstruction(int pid, const std::string& var1, const std::string& var2, const std::string& var3);
+    AddInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
     uint16_t getValue(const std::string& var);
     bool checkNumber(const std::string& var);
-    void add(const std::string& var1, const std::string& var2, const std::string& var3);
+    void add();
 private:
     std::string var1 = "";
     std::string var2 = "";
@@ -61,10 +61,10 @@ private:
 
 class SubtractInstruction : public Instruction {
 public:
-    SubtractInstruction(int pid, const std::string& var1, const std::string& var2, const std::string& var3);
+    SubtractInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
-    uint16_t getValue();
-    bool checkNumber();
+    uint16_t getValue(const std::string& var);
+    bool checkNumber(const std::string& var);
     void subtract();
 private:
     std::string var1;
@@ -74,7 +74,7 @@ private:
 
 class SleepInstruction : public Instruction {
 public:
-    SleepInstruction(int pid, uint8_t x);
+    SleepInstruction(Process* process, uint8_t x);
     void execute() override;
 private:
     uint8_t x;
@@ -82,7 +82,7 @@ private:
 
 class ForInstruction : public Instruction {
 public:
-    ForInstruction(int pid, std::vector<Instruction> instructionList, int repeats);
+    ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats);
     void execute() override;
 private:
     std::vector<Instruction> instructionList;

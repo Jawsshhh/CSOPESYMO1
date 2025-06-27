@@ -128,7 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FCFS.cpp" />
-    <ClCompile Include="Instructions.cpp" />
+    <ClCompile Include="Instruction.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MessageBuffer.cpp" />
     <ClCompile Include="Process.cpp" />
@@ -139,7 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FCFS.h" />
-    <ClInclude Include="Instructions.h" />
+    <ClInclude Include="Instruction.h" />
     <ClInclude Include="MessageBuffer.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="ProcessHandler.h" />

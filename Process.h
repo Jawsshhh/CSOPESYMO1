@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "Instructions.h"
+#include "Instruction.h"
 #include "SymbolTable.h"
 
 class Process {
@@ -22,7 +22,7 @@ public:
     void setAssignedCore(int core);
     int getAssignedCore() const;
     size_t getCurrentInstruction() const { return currentInstruction; }
-    size_t getInstructionCount() const { return instructions.size(); }
+    size_t getInstructionCount() const { return instructionList.size(); }
     void executeNextInstruction();
     void addInstruction(const std::string& instruction);
     void setFinished(bool finished) {
@@ -31,13 +31,16 @@ public:
     }
     bool isFinished() const {
         std::lock_guard<std::mutex> lock(stateMutex);
-        return isFinishedFlag || currentInstruction >= instructions.size();
+        return isFinishedFlag || currentInstruction >= instructionList.size();
     }
     void setMaxExecutionDelay(int delay);
+
+    SymbolTable& getSymbolTable();
 
 
 private:
     SymbolTable symbolTable;
+    std::vector<Instruction> instructionList;
     static std::mutex fileMutex;
     void logInstruction(const std::string& type, const std::string& details);
     mutable std::mutex stateMutex;
@@ -46,7 +49,6 @@ private:
     std::string creationTime;
     std::ofstream logFile;
     int assignedCore = -1;
-    std::vector<std::string> instructions;
     size_t currentInstruction = 0;
     std::atomic<bool> isFinishedFlag{ false };
 
