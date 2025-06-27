@@ -121,6 +121,7 @@ bool Process::isFinished() const
     std::lock_guard<std::mutex> lock(stateMutex);
     return isFinishedFlag || currentInstruction >= instructionList.size();
 }
+
 std::vector<std::string> Process::getLogs() const {
     std::vector<std::string> logs;
     std::string logFileName = "process_" + std::to_string(id) + ".txt";
@@ -139,9 +140,11 @@ std::vector<std::string> Process::getLogs() const {
 
     return logs;
 }
+
 std::string Process::getStatus() const {
     return isFinished() ? "Finished!" : "Running";
 }
+
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {
     case Instruction::InstructionType::PRINT:    return "PRINT";

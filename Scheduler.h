@@ -7,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <iostream>
 #include <algorithm>
 
 class Scheduler {
@@ -17,7 +18,8 @@ public:
     virtual void start();
     virtual void stop();
     virtual void addProcess(std::shared_ptr<Process> process) = 0;
-    virtual void listProcesses();  
+    virtual void listProcesses();
+    //virtual void generateReport(const std::string& filename) = 0;
 
 protected:
     int numCores;

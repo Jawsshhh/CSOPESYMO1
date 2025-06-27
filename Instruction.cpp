@@ -127,6 +127,7 @@ uint16_t AddInstruction::getValue(const std::string& var)
 
 	
 }
+
 std::string AddInstruction::getDetails() const {
 	return "ADD " + process->getSymbolTable().retrieveValue(var1) + " = " + var2 + " + " + var3;
 }

@@ -232,8 +232,8 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
             try {
                 scheduler->addProcess(process);
             }
-            catch (const exception& e) {
-                // Handle exception if needed
+            catch (const exception&) {
+
             }
         }
 
@@ -436,11 +436,11 @@ int main() {
             cout << "Stopped automatic process population.\n";
             }
         else if (inputCommand == "report-util") {
-            cout << "report-util command recognized. Doing something.\n";
+            
         }
         else if (inputCommand == "screen -ls") {
             if(scheduler){
-            scheduler->listProcesses();
+                scheduler->listProcesses();
             }
          }
         else if (inputCommand == "clear") {

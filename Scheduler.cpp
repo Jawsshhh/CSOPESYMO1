@@ -52,14 +52,14 @@ void Scheduler::listProcesses() {
     for (const auto& process : runningProcs) {
         std::cout << "  " << process->getName()
             << " (ID: " << process->getId()
-            << ") on Core: " << process->getAssignedCore()
-            << "\n";
+            << ")  (" << process->getCreationTime() << ")  on Core: " << process->getAssignedCore()
+            << "  " << process->getCurrentInstructionIndex() << "/" << process->getInstructionCount() << "\n";
     }
 
     std::cout << "\nFinished processes (" << finishedProcs.size() << "):\n";
     for (const auto& process : finishedProcs) {
         std::cout << "  " << process->getName()
-            << " (ID: " << process->getId() << ")\n";
+            << " (ID: " << process->getId() << ")   Finished!\n";
     }
     std::cout << "===================\n";
 }
