@@ -38,7 +38,17 @@ DeclareInstruction::DeclareInstruction(int pid, std::string& varName, uint16_t v
 void DeclareInstruction::execute()
 {
 	Instruction::execute();
+	performDeclaration();
 
+}
+
+void DeclareInstruction::performDeclaration()
+{
+	//check if variable is in the symbol table
+
+
+	//if it is in the symbol table, throw error
+	//if not, push into symbol table with INT data type
 
 }
 

@@ -8,8 +8,8 @@
 #include <map>
 #include <string>
 #include <vector>
-//#include "Instruction.h"
-//#include "SymbolTable.h"
+#include "Instructions.h"
+#include "SymbolTable.h"
 
 class Process {
 public:
@@ -29,6 +29,7 @@ public:
 
 
 private:
+    SymbolTable symbolTable;
     static std::mutex fileMutex;
     void logInstruction(const std::string& type, const std::string& details);
 
@@ -39,6 +40,7 @@ private:
     int assignedCore = -1;
     std::vector<std::string> instructions;
     size_t currentInstruction = 0;
+
 
     int delayCount = 0;        
     int maxExecDelay = 0;

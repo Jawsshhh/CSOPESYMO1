@@ -13,14 +13,15 @@ public:
     };
 
     class ST {
-        enum DataType;
+    public:
+        DataType dataType;
         std::string value;
     };
 
+    bool checkVarExists(const std::string& varName);
+    std::string retrieveValue(const std::string& varName);
+    bool insertVariable(const std::string& varName, DataType dataType, const std::string& value);
+    bool removeVariable(const std::string& varName);
+private:
     std::unordered_map<std::string, ST> symbolTable;
-
-    bool checkVarExists(std::string varName);
-    std::string retriveValue(std::string varName);
-    bool insertVariable(std::string, DataType dataType, );
-    bool removeVariable()
 };

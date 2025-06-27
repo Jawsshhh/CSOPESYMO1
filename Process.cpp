@@ -24,7 +24,6 @@ Process::~Process() {
     }
 }
 
-
 int Process::getId() const {
     return id;
 }

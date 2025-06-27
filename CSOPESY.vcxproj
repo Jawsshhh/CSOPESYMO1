@@ -132,6 +132,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MessageBuffer.cpp" />
     <ClCompile Include="Process.cpp" />
+    <ClCompile Include="ProcessHandler.cpp" />
     <ClCompile Include="RoundRobin.cpp" />
     <ClCompile Include="Scheduler.cpp" />
     <ClCompile Include="SymbolTable.cpp" />
@@ -141,6 +142,7 @@
     <ClInclude Include="Instructions.h" />
     <ClInclude Include="MessageBuffer.h" />
     <ClInclude Include="Process.h" />
+    <ClInclude Include="ProcessHandler.h" />
     <ClInclude Include="RoundRobin.h" />
     <ClInclude Include="Scheduler.h" />
     <ClInclude Include="SymbolTable.h" />

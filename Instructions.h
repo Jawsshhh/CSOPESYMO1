@@ -39,6 +39,7 @@ class DeclareInstruction : public Instruction {
 public:
     DeclareInstruction(int pid, std::string& varName, uint16_t value);
     void execute() override;
+    void performDeclaration();
 private:
     std::string varName;
     std::string value;
