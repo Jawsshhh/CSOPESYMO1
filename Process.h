@@ -13,16 +13,24 @@
 
 class Process {
 public:
+    enum class ProcessState {
+        NEW,
+        READY,
+        RUNNING,
+        TERMINATED,
+        WAITING,
+    };
+
     Process(const std::string& name, int id);
     ~Process();
 
     std::string getName() const;
     std::string getCreationTime() const;
     int getId() const;
-    void setAssignedCore(int core);
     int getAssignedCore() const;
-    size_t getCurrentInstruction() const { return currentInstruction; }
-    size_t getInstructionCount() const { return instructions.size(); }
+
+    void setAssignedCore(int core);
+
     void executeNextInstruction();
     void addInstruction(const std::string& instruction);
     void setFinished(bool finished) {

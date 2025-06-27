@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 
 class Instruction {
 public:
@@ -47,22 +48,28 @@ private:
 
 class AddInstruction : public Instruction {
 public:
-    AddInstruction(int pid, int var1, int var2, int var3);
+    AddInstruction(int pid, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
+    uint16_t getValue(const std::string& var);
+    bool checkNumber(const std::string& var);
+    void add(const std::string& var1, const std::string& var2, const std::string& var3);
 private:
-    int var1;
-    int var2;
-    int var3;
+    std::string var1 = "";
+    std::string var2 = "";
+    std::string var3 = "";
 };
 
 class SubtractInstruction : public Instruction {
 public:
-    SubtractInstruction(int pid, int var1, int var2, int var3);
+    SubtractInstruction(int pid, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
+    uint16_t getValue();
+    bool checkNumber();
+    void subtract();
 private:
-    int var1;
-    int var2;
-    int var3;
+    std::string var1;
+    std::string var2;
+    std::string var3;
 };
 
 class SleepInstruction : public Instruction {

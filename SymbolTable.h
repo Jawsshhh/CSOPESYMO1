@@ -22,6 +22,7 @@ public:
     std::string retrieveValue(const std::string& varName);
     bool insertVariable(const std::string& varName, DataType dataType, const std::string& value);
     bool removeVariable(const std::string& varName);
+    bool updateVariable(const std::string& varName, const std::string& value);
 private:
     std::unordered_map<std::string, ST> symbolTable;
 };

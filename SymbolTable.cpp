@@ -11,7 +11,7 @@ bool SymbolTable::checkVarExists(const std::string& varName)
 
 std::string SymbolTable::retrieveValue(const std::string& varName)
 {
-    if (checkVarExists(varName) == true) {
+    if (checkVarExists(varName)) {
         return symbolTable.at(varName).value;
     }
     return "";
@@ -20,7 +20,7 @@ std::string SymbolTable::retrieveValue(const std::string& varName)
 bool SymbolTable::insertVariable(const std::string& varName, DataType dataType, const std::string& value)
 {
     //if the variable doesn't exist, insert new variable
-    if (checkVarExists(varName) == true) {
+    if (!checkVarExists(varName)) {
         ST entry;
         entry.dataType = dataType;
         entry.value = value;
@@ -34,8 +34,20 @@ bool SymbolTable::insertVariable(const std::string& varName, DataType dataType, 
 
 bool SymbolTable::removeVariable(const std::string& varName)
 {
-    if (checkVarExists(varName) == true) {
+    if (checkVarExists(varName)) {
         symbolTable.erase(varName);
+        return true;
+    }
+    return false;
+}
+
+bool SymbolTable::updateVariable(const std::string& varName, const std::string& newValue)
+{
+    if (checkVarExists(varName)) {
+        ST entry;
+        entry.dataType = symbolTable[varName].dataType;
+        entry.value = newValue;
+        symbolTable[varName] = entry;
         return true;
     }
     return false;
