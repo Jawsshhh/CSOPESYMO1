@@ -1,0 +1,17 @@
+Process name: process_504
+Logs:
+(06/28/2025 10:40:13PM) Core:1 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:1 "ADD 45 = 37 + 8"
+(06/28/2025 10:40:13PM) Core:1 "ADD 19 = 1 + 18"
+(06/28/2025 10:40:13PM) Core:1 "SUB 65529 = 28 - 35"
+(06/28/2025 10:40:13PM) Core:1 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:0 "SUB 65513 = 0 - 23"
+(06/28/2025 10:40:13PM) Core:0 "Message: Hello world from process_504"
+(06/28/2025 10:40:13PM) Core:0 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:0 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:0 "ADD 53 = 27 + 26"
+(06/28/2025 10:40:14PM) Core:0 "Message: Hello world from process_504"
+(06/28/2025 10:40:14PM) Core:0 "Declared variable: var with value: 10"
+(06/28/2025 10:40:14PM) Core:0 "ADD 44 = 15 + 29"
+(06/28/2025 10:40:14PM) Core:0 "ADD 85 = 36 + 49"
+(06/28/2025 10:40:14PM) Core:0 "ADD 41 = 32 + 9"

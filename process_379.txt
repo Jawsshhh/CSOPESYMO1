@@ -1,0 +1,17 @@
+Process name: process_378
+Logs:
+(06/28/2025 10:40:10PM) Core:3 "ADD 65 = 44 + 21"
+(06/28/2025 10:40:10PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:10PM) Core:3 "ADD 33 = 27 + 6"
+(06/28/2025 10:40:10PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:10PM) Core:3 "ADD 55 = 15 + 40"
+(06/28/2025 10:40:11PM) Core:3 "SUB 65490 = 0 - 46"
+(06/28/2025 10:40:11PM) Core:3 "ADD 58 = 26 + 32"
+(06/28/2025 10:40:11PM) Core:3 "Message: Hello world from process_378"
+(06/28/2025 10:40:11PM) Core:3 "ADD 61 = 14 + 47"
+(06/28/2025 10:40:11PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:11PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:11PM) Core:3 "SUB 65507 = 3 - 32"
+(06/28/2025 10:40:11PM) Core:3 "Message: Hello world from process_378"
+(06/28/2025 10:40:11PM) Core:3 "ADD 70 = 32 + 38"
+(06/28/2025 10:40:11PM) Core:3 "ADD 74 = 31 + 43"

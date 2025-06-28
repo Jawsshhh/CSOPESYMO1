@@ -1,0 +1,17 @@
+Process name: process_502
+Logs:
+(06/28/2025 10:40:13PM) Core:1 "Message: Hello world from process_502"
+(06/28/2025 10:40:13PM) Core:1 "Message: Hello world from process_502"
+(06/28/2025 10:40:13PM) Core:1 "ADD 44 = 7 + 37"
+(06/28/2025 10:40:13PM) Core:1 "SUB 6 = 36 - 30"
+(06/28/2025 10:40:13PM) Core:1 "Message: Hello world from process_502"
+(06/28/2025 10:40:13PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:3 "SUB 65532 = 9 - 13"
+(06/28/2025 10:40:13PM) Core:3 "Message: Hello world from process_502"
+(06/28/2025 10:40:13PM) Core:3 "Message: Hello world from process_502"
+(06/28/2025 10:40:14PM) Core:1 "Message: Hello world from process_502"
+(06/28/2025 10:40:14PM) Core:1 "ADD 29 = 5 + 24"
+(06/28/2025 10:40:14PM) Core:1 "Declared variable: var with value: 10"
+(06/28/2025 10:40:14PM) Core:1 "SUB 23 = 32 - 9"
+(06/28/2025 10:40:14PM) Core:1 "Message: Hello world from process_502"

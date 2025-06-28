@@ -1,0 +1,12 @@
+Process name: process_475
+Logs:
+(06/28/2025 10:40:12PM) Core:0 "SUB 65505 = 10 - 41"
+(06/28/2025 10:40:12PM) Core:0 "SUB 65527 = 16 - 25"
+(06/28/2025 10:40:12PM) Core:0 "Declared variable: var with value: 10"
+(06/28/2025 10:40:12PM) Core:0 "ADD 58 = 30 + 28"
+(06/28/2025 10:40:12PM) Core:0 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:3 "SUB 65514 = 3 - 25"
+(06/28/2025 10:40:13PM) Core:3 "Declared variable: var with value: 10"
+(06/28/2025 10:40:13PM) Core:3 "SUB 65504 = 2 - 34"
+(06/28/2025 10:40:13PM) Core:3 "ADD 58 = 14 + 44"
+(06/28/2025 10:40:13PM) Core:3 "Declared variable: var with value: 10"
