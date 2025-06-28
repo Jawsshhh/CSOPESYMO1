@@ -380,19 +380,17 @@ int main() {
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
 
-            if (!process || process->isFinished()) {
+            if (!process /*|| process->isFinished()*/) {
                 cout << "Process " << name << " not found.\n";
                 continue;
             }
-
-           
 
             consoleManager.switchConsole(name);
             consoleManager.initializeScreen();
 
             string subCommand;
             while (getline(cin, subCommand)) {
-                cout << "Enter command:> ";
+                //cout << "Enter command:> ";
                 if (subCommand == "exit") {
                     consoleManager.destroyScreen();
                     consoleManager.switchConsole("MAIN");
@@ -400,6 +398,7 @@ int main() {
                     break;
                 }
                 else if (subCommand == "process-smi") {
+                    cout << "===================\n";
                     cout << "Process name: " << process->getName() << "\n";
                     cout << "ID: " << process->getId() << "\n";
                     cout << "Messages:\n";  // Changed from "Logs:"
@@ -411,11 +410,13 @@ int main() {
 
                     if (process->isFinished()) {
                         cout << "Finished!\n";
+                        cout << "===================\n";
                     }
                     else {
                         cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
                             << "/" << process->getInstructionCount() << "\n";
                     }
+                    cout << "Enter command: ";
                 }
                 else {
                     cout << "Unknown screen command. Type 'exit' to return.\n";
@@ -470,7 +471,7 @@ int main() {
                 scheduler->generateReport("csopesy.txt");
                 std::cout << "Report generated to csopesy.txt!\n";  // Can replace csopesy.txt to filepath
             }
-         }
+        }
 
         else if (inputCommand == "screen -ls") {
             if(scheduler){

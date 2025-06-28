@@ -108,7 +108,7 @@ void RRScheduler::workerLoop(int coreId) {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
-                    std::cout << "Process " << process->getId() << " completed\n";
+                    //std::cout << "Process " << process->getId() << " completed\n";
                 }
                 else if (!process->isSleeping()) {
                     readyQueue.push(process); // Requeue if not finished or sleeping

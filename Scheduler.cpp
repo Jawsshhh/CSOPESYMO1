@@ -2,6 +2,7 @@
 #include "Instruction.h"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 
 Scheduler::Scheduler(int numCores) : numCores(numCores), running(false) {
     coreAvailable.resize(numCores, true); 
@@ -41,14 +42,20 @@ void Scheduler::listProcesses() {
     auto runningProcs = processHandler.getRunningProcesses();
     auto finishedProcs = processHandler.getFinishedProcesses();
 
-    std::cout << "\n=== Process List ===\n";
-    std::cout << "CPU Cores: " << numCores << " (";
-    for (int i = 0; i < numCores; ++i) {
-        std::cout << (coreAvailable[i] ? "free" : "busy");
-        if (i != numCores - 1) std::cout << " ";
+    int coresUsed = 0;
+    for (bool available : coreAvailable) {
+        if (!available) coresUsed++;
     }
-    std::cout << ")\n";
+    int coresAvailable = numCores - coresUsed;
 
+    int cpuUtilization = static_cast<int>((static_cast<float>(coresUsed) / numCores) * 100);
+
+    std::cout << "\n=== Process List ===\n";
+    std::cout << "CPU utilization: " << cpuUtilization << "\n";
+    std::cout << "Cores used: " << coresUsed << "\n";
+    std::cout << "Cores available: " << coresAvailable << "\n";    
+    
+    
     std::cout << "\nRunning processes (" << runningProcs.size() << "):\n";
     for (const auto& process : runningProcs) {
         std::cout << "  " << process->getName()
@@ -68,43 +75,41 @@ void Scheduler::listProcesses() {
 void Scheduler::generateReport(const std::string& filename) {
     std::lock_guard<std::mutex> lock(queueMutex);
 
-    std::ofstream outFile(filename);
-    if (!outFile.is_open()) {
+    auto runningProcs = processHandler.getRunningProcesses();
+    auto finishedProcs = processHandler.getFinishedProcesses();
+
+    int coresUsed = 0;
+    for (bool available : coreAvailable) {
+        if (!available) coresUsed++;
+    }
+    int coresAvailable = numCores - coresUsed;
+
+    int cpuUtilization = static_cast<int>((static_cast<float>(coresUsed) / numCores) * 100);
+
+    std::ofstream outputFile(filename);
+    if (!outputFile.is_open()) {
         std::cerr << "Error: Could not open file " << filename << " for writing.\n";
         return;
     }
 
-    // Clean up finished processes list
-    runningProcesses.erase(
-        std::remove_if(runningProcesses.begin(), runningProcesses.end(),
-            [](const auto& p) { return p->isFinished(); }),
-        runningProcesses.end());
+    outputFile << "=== Process List ===\n";
+    outputFile << "CPU utilization: " << cpuUtilization << "\n";
+    outputFile << "Cores used: " << coresUsed << "\n";
+    outputFile << "Cores available: " << coresAvailable << "\n";
 
-    outFile << "=== Process Report ===\n";
-    outFile << "CPU Cores: " << numCores << " (";
-    for (bool available : coreAvailable) {
-        outFile << (available ? "free" : "busy") << " ";
-    }
-    outFile << ")\n\n";
-
-    outFile << "Running processes (" << runningProcesses.size() << "):\n";
-    for (const auto& process : runningProcesses) {
-        outFile << "  " << process->getName()
-            << " (ID: " << process->getId() << ")  "
-            << "(" << process->getCreationTime() << ")  "
-            << "on Core: " << process->getAssignedCore()
-            << "  " << process->getCurrentInstructionIndex()
-            << "/" << process->getInstructionCount()
-            << "\n";
+    outputFile << "\nRunning processes (" << runningProcs.size() << "):\n";
+    for (const auto& process : runningProcs) {
+        outputFile << "  " << process->getName()
+            << " (ID: " << process->getId()
+            << ")  (" << process->getCreationTime() << ")  on Core: " << process->getAssignedCore()
+            << "  " << process->getCurrentInstructionIndex() << "/" << process->getInstructionCount() << "\n";
     }
 
-    outFile << "\nFinished processes (" << finishedProcesses.size() << "):\n";
-    for (const auto& process : finishedProcesses) {
-        outFile << "  " << process->getName()
-            << " (ID: " << process->getId() << ")\n";
+    outputFile << "\nFinished processes (" << finishedProcs.size() << "):\n";
+    for (const auto& process : finishedProcs) {
+        outputFile << "  " << process->getName()
+            << " (ID: " << process->getId() << ")   Finished!\n";
     }
-
-    outFile << "=======================\n";
-
-    outFile.close();
+    outputFile << "===================\n";
+    outputFile.close();
 }

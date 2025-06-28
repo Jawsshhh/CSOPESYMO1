@@ -205,10 +205,10 @@ SleepInstruction::SleepInstruction(Process* process, uint8_t x) :
 }
 
 void SleepInstruction::execute() {
-	Instruction::execute();
+	/*Instruction::execute();
 	sleeping = true;
 	process->setSleeping(true, sleepTicks);
-	std::cout << "DEBUG: SleepInstruction executed - ticks: " << sleepTicks << "\n";
+	std::cout << "DEBUG: SleepInstruction executed - ticks: " << sleepTicks << "\n";*/
 }
 
 std::string SleepInstruction::getDetails() const {

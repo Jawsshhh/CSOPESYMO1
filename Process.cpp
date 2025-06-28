@@ -12,6 +12,7 @@ Process::Process(const std::string& name, int id) : name(name), id(id) {
     ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
     creationTime = ss.str();
 
+
     std::lock_guard<std::mutex> lock(fileMutex);
     logFile.open("process_" + std::to_string(id) + ".txt", std::ios::out | std::ios::trunc);
     logFile << "Process name: " << name << "\nLogs:\n";
