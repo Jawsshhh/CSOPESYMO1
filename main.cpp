@@ -197,7 +197,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
             case 0: {
                 auto printInstr = make_shared<PrintInstruction>(
                     process.get(),
-                    "Hello world from " + processName
+                    "Hello from " + processName
                 );
                 process->addInstruction(printInstr);
                 break;
@@ -214,7 +214,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 break;
             }
             case 2: {
-                std::string destVar = "var1";
+                std::string destVar = "0";
                 std::string src1 = std::to_string(rand() % 50);
                 std::string src2 = std::to_string(rand() % 50);
 
@@ -251,9 +251,8 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 break;
             }
             }
-            
         }
-        
+
         if (config.populate_running) {
             try {
                 scheduler->addProcess(process);
@@ -484,7 +483,6 @@ int main() {
         else if (inputCommand == "exit") {
             if (scheduler) {
                 scheduler->stop();
-
             }
 
             cout << "Exiting the program.\n";

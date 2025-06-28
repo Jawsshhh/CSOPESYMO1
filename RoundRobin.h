@@ -8,7 +8,6 @@ public:
     ~RRScheduler() override;
 
     void addProcess(std::shared_ptr<Process> process);
-   
 
 private:
     void schedulerLoop() override;

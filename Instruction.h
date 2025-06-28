@@ -48,12 +48,12 @@ class DeclareInstruction : public Instruction {
 public:
     DeclareInstruction(Process* process, const std::string& varName, uint16_t value);
     void execute() override;
-    std::string getDetails() const override;
+    std::string getDetails() const override;  // Add this line
     bool performDeclaration();
 
 private:
     std::string varName;
-    uint16_t value;
+    uint16_t value;  // Changed from std::string to uint16_t to match constructor
 };
 
 class AddInstruction : public Instruction {
@@ -77,32 +77,21 @@ class SubtractInstruction : public Instruction {
 public:
     SubtractInstruction(Process* process, const std::string& var1, const std::string& var2, const std::string& var3);
     void execute() override;
-    std::string getDetails() const override;
+    uint16_t getValue(const std::string& var);
+    bool checkNumber(const std::string& var);
     void subtract();
 private:
     std::string var1;
     std::string var2;
     std::string var3;
-
-    uint16_t getValue(const std::string& var);
-    bool checkNumber(const std::string& var);
 };
 
 class SleepInstruction : public Instruction, public std::enable_shared_from_this<SleepInstruction> {
 public:
     SleepInstruction(Process* process, uint8_t x);
     void execute() override;
-    std::string getDetails() const override;
-    bool isSleeping() const;
-    int getSleepTicks() const;
-    void tickLog();
-
 private:
-    uint8_t durationTicks = 0;
-    uint64_t startTick = 0;
-    uint64_t lastLoggedTick = 0;
-    std::atomic<bool> sleeping{ false };
-    int ticksRemaining() const;
+    uint8_t x;
 };
 
 class ForInstruction : public Instruction {

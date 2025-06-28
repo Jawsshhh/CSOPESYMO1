@@ -31,7 +31,7 @@ bool SymbolTable::insertVariable(const std::string& varName, DataType dataType, 
         ST entry;
         entry.dataType = dataType;
         entry.value = value;
-        symbolTable.insert({ varName, entry });
+        symbolTable[varName] = entry;
         return true;
     }
     //if the variable does exist, do nothing
