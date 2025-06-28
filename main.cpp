@@ -16,6 +16,9 @@ using namespace std;
 #include "Process.h"
 #include "FCFS.h"
 #include "RoundRobin.h"
+#include "CPUTick.h"
+
+CPUTick cpuTick;
 
 struct Config {
     int num_cpu = 0;
@@ -173,7 +176,6 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
-
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
     static int processCounter = 0;  // Counter for unique process names
 
@@ -240,11 +242,10 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 break;
             }
             case 4: {
-                uint8_t sleepTicks = 1 + rand() % 10; // Sleep for 1-10 ticks
-
+                uint8_t = 1 + rand() % 5;
                 auto sleepInstr = make_shared<SleepInstruction>(
                     process.get(),
-                    sleepTicks
+                    config.batch_process_freq
                 );
                 process->addInstruction(sleepInstr);
                 break;
@@ -276,10 +277,7 @@ int main() {
     unique_ptr<Scheduler> scheduler;
     consoleManager.initializeScreen();
 
-    int cpuTick = 0;
-
     while (true) {
-        cpuTick++;
 
         cout << "Enter a command: ";
 
@@ -304,6 +302,7 @@ int main() {
                     }
                 }
                 config.initialized = true;
+                cpuTick.start(config.batch_process_freq);
 
                 cout << "System initialized with the following configuration:\n"
                     << "Number of CPUs: " << config.num_cpu << "\n"
@@ -495,6 +494,7 @@ int main() {
             cout << "Unknown command. Try again.\n";
         }
     }
+    cpuTick.stop();
     return 0;
 
 }

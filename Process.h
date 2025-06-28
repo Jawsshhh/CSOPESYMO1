@@ -36,6 +36,10 @@ public:
     int getRemainingSleepTicks() const;
     std::vector<std::string> getLogs() const;
     std::string getStatus() const;
+    void logInstruction(const std::string& type, const std::string& details);
+
+    void setCurrentSleepInstruction(std::shared_ptr<SleepInstruction> instr);
+    std::shared_ptr<SleepInstruction> getCurrentSleepInstruction();
 
     SymbolTable& getSymbolTable();
 
@@ -44,7 +48,6 @@ private:
     SymbolTable symbolTable;
     std::vector<std::shared_ptr<Instruction>> instructionList;
     static std::mutex fileMutex;
-    void logInstruction(const std::string& type, const std::string& details);
     mutable std::mutex stateMutex;
     std::string name;
     int id;

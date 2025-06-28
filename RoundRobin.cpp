@@ -24,21 +24,15 @@ void RRScheduler::schedulerLoop() {
     while (running) {
         std::unique_lock<std::mutex> lock(queueMutex);
         cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
-
         if (!running) break;
 
-        // Distribute processes to all available cores
         for (int core = 0; core < numCores && !readyQueue.empty(); ++core) {
             if (coreAvailable[core]) {
                 auto process = readyQueue.front();
                 readyQueue.pop();
-
                 process->setAssignedCore(core);
                 coreAvailable[core] = false;
                 processHandler.insertProcess(process);
-
-                
-
                 cv.notify_all();
             }
         }
@@ -53,29 +47,23 @@ void RRScheduler::workerLoop(int coreId) {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-
-            // Wait until there's work to do or we're stopping
             cv.wait(lock, [this, coreId]() {
-                return !running ||
-                    !readyQueue.empty() ||
-                    processHandler.hasUnfinishedProcessOnCore(coreId);
+                return !running || !readyQueue.empty() || processHandler.hasUnfinishedProcessOnCore(coreId);
                 });
-
             if (!running) break;
 
-            // First handle sleeping processes
-            auto coreProcs = processHandler.getProcessesByCore(coreId);
-            for (auto& p : coreProcs) {
-                if (p->isSleeping()) {
+            auto allProcs = processHandler.getAllProcesses();
+            for (auto& p : allProcs) {
+                if (p->getAssignedCore() == coreId && p->isSleeping()) {
                     p->updateSleep();
                     if (!p->isSleeping() && !p->isFinished()) {
-                        readyQueue.push(p); // Requeue awakened processes
+                        readyQueue.push(p);
                         std::cout << "Process " << p->getId() << " woke up\n";
                     }
                 }
             }
 
-            // Get next process to execute
+
             if (!readyQueue.empty()) {
                 process = readyQueue.front();
                 readyQueue.pop();
@@ -87,20 +75,10 @@ void RRScheduler::workerLoop(int coreId) {
         if (process) {
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
-                if (process->isSleeping()) {
-                    break; // Skip sleeping processes
-                }
-
+                if (process->isSleeping()) break;
                 process->executeNextInstruction();
                 cyclesUsed++;
-
-                if (process->isSleeping()) {
-                    std::cout << "Process " << process->getId()
-                        << " started sleeping\n";
-                    break;
-                }
-
-                // Add small delay between instructions
+                if (process->isSleeping()) break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
@@ -111,7 +89,7 @@ void RRScheduler::workerLoop(int coreId) {
                     //std::cout << "Process " << process->getId() << " completed\n";
                 }
                 else if (!process->isSleeping()) {
-                    readyQueue.push(process); // Requeue if not finished or sleeping
+                    readyQueue.push(process);
                 }
                 coreAvailable[coreId] = true;
             }
