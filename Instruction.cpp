@@ -210,28 +210,34 @@ void SubtractInstruction::subtract()
 SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP)
 {
 
+	process->getSymbolTable().updateVariable(var1, std::to_string(result));
 }
 
-int SleepInstruction::ticksRemaining() const {
-	int remaining = static_cast<int>(durationTicks - (cpuTick.getTick() - startTick));
-	return std::max(remaining, 0);
+std::string SubtractInstruction::getDetails() const {
+	return "SUB " + process->getSymbolTable().retrieveValue(var1) + " = " + var2 + " - " + var3;
 }
 
-void SleepInstruction::tickLog() {
-	if (sleeping) {
-		auto current = cpuTick.getTick();
-		std::cout << "[DEBUG] PID " << process->getId()
-			<< " CPU Tick: " << current
-			<< ", Last Logged Tick: " << lastLoggedTick << "\n";
+/*
+* SLEEP INSTRUCTION
+*/
 
-		if (current > lastLoggedTick) {
-			lastLoggedTick = current;
-			int remain = ticksRemaining();
-			process->logInstruction("SLEEP", "SLEEP: " + std::to_string(remain) + " ticks remaining");
-		}
-	}
+SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP), 
+	x(x) {	
 }
 
+
+void SleepInstruction::execute()
+{
+	Instruction::execute();
+}
+
+std::string SleepInstruction::getDetails() const {
+	return "SLEEP for ";
+}
+
+/*
+* FOR INSTRUCTION
+*/
 ForInstruction::ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats) : Instruction(process, Instruction::InstructionType::FOR)
 {
 }
