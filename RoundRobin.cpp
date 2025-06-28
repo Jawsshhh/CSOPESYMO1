@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec) : Scheduler(numCores), quantum(quantum), delays_per_exec(delays_per_exec) {
+RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec) : Scheduler(numCores), quantum(quantum), delays_per_exec (delays_per_exec){
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
     }
@@ -37,7 +37,7 @@ void RRScheduler::schedulerLoop() {
                 coreAvailable[core] = false;
                 processHandler.insertProcess(process);
 
-
+                
 
                 cv.notify_all();
             }
@@ -53,54 +53,59 @@ void RRScheduler::workerLoop(int coreId) {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-
-            // Wait until there's work to do or we're stopping
             cv.wait(lock, [this, coreId]() {
-                return !running ||
-                    !readyQueue.empty() ||
+                return !running || !readyQueue.empty() ||
                     processHandler.hasUnfinishedProcessOnCore(coreId);
                 });
 
             if (!running) break;
 
-            // First handle sleeping processes
+            // Handle sleeping processes
             auto coreProcs = processHandler.getProcessesByCore(coreId);
             for (auto& p : coreProcs) {
                 if (p->isSleeping()) {
                     p->updateSleep();
                     if (!p->isSleeping() && !p->isFinished()) {
-                        readyQueue.push(p); // Requeue awakened processes
-                        //std::cout << "Process " << p->getId() << " woke up\n";
+                        readyQueue.push(p);
                     }
+                }
+                else if (p->isFinished()) {
+                    processHandler.markProcessFinished(p->getId());
+                    coreAvailable[coreId] = true;
                 }
             }
 
-            // Get next process to execute
+            // Get next process
             if (!readyQueue.empty()) {
                 process = readyQueue.front();
                 readyQueue.pop();
+
+                if (process->isFinished()) {
+                    processHandler.markProcessFinished(process->getId());
+                    process.reset();
+                    continue;
+                }
+
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
+                processHandler.insertProcess(process);
             }
         }
 
         if (process) {
             unsigned cyclesUsed = 0;
-            while (cyclesUsed < quantum && !process->isFinished() && running) {
-                if (process->isSleeping()) {
-                    break; // Skip sleeping processes
+            while (cyclesUsed < quantum && running) {
+                if (process->isFinished() || process->isSleeping()) {
+                    break;
                 }
 
                 process->executeNextInstruction();
                 cyclesUsed++;
 
-                if (process->isSleeping()) {
-                    //std::cout << "Process " << process->getId()
-                        //<< " started sleeping\n";
+                if (process->isFinished() || process->isSleeping()) {
                     break;
                 }
 
-                // Add small delay between instructions
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
@@ -108,12 +113,15 @@ void RRScheduler::workerLoop(int coreId) {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
-                    //std::cout << "Process " << process->getId() << " completed\n";
+                    coreAvailable[coreId] = true;
                 }
-                else if (!process->isSleeping()) {
-                    readyQueue.push(process); // Requeue if not finished or sleeping
+                else if (process->isSleeping()) {
+                    coreAvailable[coreId] = false;
                 }
-                coreAvailable[coreId] = true;
+                else {
+                    readyQueue.push(process);
+                    coreAvailable[coreId] = true;
+                }
             }
             cv.notify_all();
         }

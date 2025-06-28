@@ -76,15 +76,17 @@ void Process::executeNextInstruction() {
 
     if (currentInstruction < static_cast<int>(instructionList.size())) {
         auto instr = instructionList[currentInstruction++];
-
-        // Execute first to ensure any state changes happen
         instr->execute();
 
-        // Log after execution with full details
         logInstruction(
             instructionTypeToString(instr->getInstructionType()),
             instr->getDetails()
         );
+
+        // Explicitly check for completion after execution
+        if (currentInstruction >= static_cast<int>(instructionList.size())) {
+            setFinished(true);
+        }
 
         delayCount = maxExecDelay;
     }

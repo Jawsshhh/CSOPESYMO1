@@ -19,8 +19,6 @@ void Instruction::execute()
 
 }
 
-
-
 PrintInstruction::PrintInstruction(Process* process, const std::string& toPrint)
 	: Instruction(process, Instruction::InstructionType::PRINT),
 	toPrint(toPrint)
