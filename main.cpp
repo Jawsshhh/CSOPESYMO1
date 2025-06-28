@@ -469,7 +469,6 @@ int main() {
             }
             else {
                 scheduler->generateReport("csopesy.txt");
-                std::cout << "Report generated to csopesy.txt!\n";  // Can replace csopesy.txt to filepath
             }
         }
 
