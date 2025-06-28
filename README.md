@@ -37,11 +37,11 @@ max-ins 75
 delay-per-exec 0
 
 To use the app:
-Initialize -> sets up the program using the config file settings.
-scheduler-start -> automatically creates processes with a delay equal to batch-process-freq
-scheduler-end -> stops the process populstion
-screen -s <name> -> manually creates a screen and its respective process.
-screen -r <name> -> accesses a process's screen given that it exists/isn't finished.
-process-smi -> can only be accessed through a process screen and displays that process's instruction logs.
-screen -ls -> displays running and finished processes as well as CPU utilization.
-report-util -> same as screen -ls, but outputs it to a 'csopesy.txt' file.
+1. Initialize -> sets up the program using the config file settings.
+2. scheduler-start -> automatically creates processes with a delay equal to batch-process-freq
+3. scheduler-end -> stops the process populstion
+4. screen -s <name> -> manually creates a screen and its respective process.
+5. screen -r <name> -> accesses a process's screen given that it exists/isn't finished.
+6. process-smi -> can only be accessed through a process screen and displays that process's instruction logs.
+7. screen -ls -> displays running and finished processes as well as CPU utilization.
+8. report-util -> same as screen -ls, but outputs it to a 'csopesy.txt' file.
