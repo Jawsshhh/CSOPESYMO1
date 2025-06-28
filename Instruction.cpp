@@ -1,7 +1,10 @@
 #include "Instruction.h"
 #include "Process.h"
 #include "ProcessHandler.h"
+#include "CPUTick.h"
 #include <iostream>
+
+extern CPUTick cpuTick;
 
 Instruction::Instruction(Process* process, InstructionType instructionType)
 {
@@ -201,31 +204,50 @@ std::string SubtractInstruction::getDetails() const {
 
 SleepInstruction::SleepInstruction(Process* process, uint8_t x) :
 	Instruction(process, Instruction::InstructionType::SLEEP),
-	sleepTicks(x) {
+	durationTicks(x) {
 }
 
 void SleepInstruction::execute() {
 	/*Instruction::execute();
 	sleeping = true;
-	process->setSleeping(true, sleepTicks);
-	std::cout << "DEBUG: SleepInstruction executed - ticks: " << sleepTicks << "\n";*/
+	startTick = cpuTick.getTick();
+	lastLoggedTick = startTick - 1;
+	process->setSleeping(true, durationTicks);
+	process->setCurrentSleepInstruction(shared_from_this());
+	process->logInstruction("SLEEP", getDetails());
+}
+
+int SleepInstruction::ticksRemaining() const {
+	int remaining = static_cast<int>(durationTicks - (cpuTick.getTick() - startTick));
+	return std::max(remaining, 0);
+}
+
+void SleepInstruction::tickLog() {
+	if (sleeping) {
+		auto current = cpuTick.getTick();
+		std::cout << "[DEBUG] PID " << process->getId()
+			<< " CPU Tick: " << current
+			<< ", Last Logged Tick: " << lastLoggedTick << "\n";
+
+		if (current > lastLoggedTick) {
+			lastLoggedTick = current;
+			int remain = ticksRemaining();
+			process->logInstruction("SLEEP", "SLEEP: " + std::to_string(remain) + " ticks remaining");
+		}
+	}
 }
 
 std::string SleepInstruction::getDetails() const {
-	return "SLEEP for " + std::to_string(sleepTicks) + " ticks";
+	return "SLEEP for " + std::to_string(durationTicks) + " ticks";
 }
 
 bool SleepInstruction::isSleeping() const {
-	return sleeping && sleepTicks > 0;
+	return sleeping && (cpuTick.getTick() - startTick < durationTicks);
 }
 
-void SleepInstruction::decrementSleepTicks() {
-	if (sleepTicks > 0) {
-		sleepTicks--;
-		if (sleepTicks == 0) {
-			sleeping = false;
-		}
-	}
+int SleepInstruction::getSleepTicks() const
+{
+	return durationTicks;
 }
 /* FOR INSTRUCTION
 */

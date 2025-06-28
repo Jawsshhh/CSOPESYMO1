@@ -24,22 +24,19 @@ void FCFSScheduler::schedulerLoop() {
     while (running) {
         std::unique_lock<std::mutex> lock(queueMutex);
         cv.wait(lock, [this]() { return !processQueue.empty() || !running; });
-
         if (!running) break;
 
         while (!processQueue.empty()) {
             int core = findAvailableCore();
-            if (core == -1) break; // No cores available
+            if (core == -1) break;
 
             auto process = processQueue.front();
             processQueue.pop();
-
             process->setAssignedCore(core);
             coreAvailable[core] = false;
             processHandler.insertProcess(process);
             cv.notify_all();
         }
-
         lock.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
@@ -53,50 +50,39 @@ void FCFSScheduler::workerLoop(int coreId) {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             cv.wait(lock, [this, coreId]() {
-                if (!running) return true;
-
-                auto coreProcs = processHandler.getProcessesByCore(coreId);
-                return std::any_of(coreProcs.begin(), coreProcs.end(),
-                    [](const auto& p) { return !p->isFinished() && !p->isSleeping(); });
+                return !running || processHandler.hasUnfinishedProcessOnCore(coreId);
                 });
-
             if (!running) break;
 
+           
+            auto allProcs = processHandler.getAllProcesses();
+            for (auto& p : allProcs) {
+                if (p->getAssignedCore() == coreId && p->isSleeping()) {
+                    p->updateSleep();
+                    if (!p->isSleeping() && !p->isFinished()) {
+                        std::cout << "Process " << p->getId() << " woke up\n";
+                    }
+                }
+            }
+
             auto coreProcs = processHandler.getProcessesByCore(coreId);
-            auto it = std::find_if(coreProcs.begin(), coreProcs.end(),
-                [](const auto& p) { return !p->isFinished() && !p->isSleeping(); });
+            auto it = std::find_if(coreProcs.begin(), coreProcs.end(), [](const auto& p) {
+                return !p->isFinished() && !p->isSleeping();
+                });
             if (it != coreProcs.end()) {
                 process = *it;
             }
         }
 
         if (process) {
-            // Check if process is sleeping
-            if (process->isSleeping()) {
-                process->updateSleep();
-                if (!process->isSleeping()) {
-                    // Process woke up
-                    std::lock_guard<std::mutex> lock(queueMutex);
-                    cv.notify_all();
-                }
-                continue;
-            }
-
-            while (!process->isFinished() && !process->isSleeping() && running) {
+            while (!process->isFinished() && running) {
+                if (process->isSleeping()) break;
                 process->executeNextInstruction();
+                if (process->isSleeping()) break;
 
-                // Handle sleep instruction if it was just executed
-                if (process->isSleeping()) {
-                    // Process will be put to sleep, break the execution loop
-                    break;
-                }
-
-                auto start_time = std::chrono::high_resolution_clock::now();
-                while (true) {
-                    auto current_time = std::chrono::high_resolution_clock::now();
-                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        current_time - start_time).count();
-                    if (elapsed >= delays_per_exec) break;
+                auto start = std::chrono::high_resolution_clock::now();
+                while (std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - start).count() < delays_per_exec) {
                 }
             }
 
@@ -111,3 +97,4 @@ void FCFSScheduler::workerLoop(int coreId) {
         }
     }
 }
+

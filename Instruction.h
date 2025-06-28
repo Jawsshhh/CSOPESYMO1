@@ -88,18 +88,21 @@ private:
     bool checkNumber(const std::string& var);
 };
 
-class SleepInstruction : public Instruction {
+class SleepInstruction : public Instruction, public std::enable_shared_from_this<SleepInstruction> {
 public:
     SleepInstruction(Process* process, uint8_t x);
     void execute() override;
     std::string getDetails() const override;
     bool isSleeping() const;
-    void decrementSleepTicks();
-    int getSleepTicks() const { return sleepTicks; }
+    int getSleepTicks() const;
+    void tickLog();
 
 private:
-    uint8_t sleepTicks;
+    uint8_t durationTicks = 0;
+    uint64_t startTick = 0;
+    uint64_t lastLoggedTick = 0;
     std::atomic<bool> sleeping{ false };
+    int ticksRemaining() const;
 };
 
 class ForInstruction : public Instruction {

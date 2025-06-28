@@ -93,7 +93,7 @@ void Process::executeNextInstruction() {
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
     // Only log PRINT instructions
-    if (type == "PRINT") {
+    //if (type == "PRINT") {
         time_t now = time(nullptr);
         tm local;
         localtime_s(&local, &now);
@@ -104,7 +104,8 @@ void Process::logInstruction(const std::string& type, const std::string& details
         logFile << "(" << ss.str() << ") Core:" << assignedCore
             << " \"" << details << "\"\n";
         logFile.flush();
-    }
+   // }
+
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
@@ -147,11 +148,13 @@ bool Process::isSleeping() const {
 }
 
 void Process::updateSleep() {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    if (remainingSleepTicks > 0) {
-        remainingSleepTicks--;
-        if (remainingSleepTicks == 0) {
+    if (sleeping && currentSleepInstruction) {
+        std::cout << "[DEBUG] Process " << id << " updateSleep() called. Remaining: "
+            << getRemainingSleepTicks() << "\n";  // TEMP DEBUG
+        currentSleepInstruction->tickLog();
+        if (!currentSleepInstruction->isSleeping()) {
             sleeping = false;
+            currentSleepInstruction = nullptr;
         }
     }
 }
@@ -168,6 +171,16 @@ int Process::getRemainingSleepTicks() const {
 }
 std::string Process::getStatus() const {
     return isFinished() ? "Finished!" : "Running";
+}
+
+void Process::setCurrentSleepInstruction(std::shared_ptr<SleepInstruction> instr)
+{
+    currentSleepInstruction = std::dynamic_pointer_cast<SleepInstruction>(instr);
+}
+
+std::shared_ptr<SleepInstruction> Process::getCurrentSleepInstruction()
+{
+    return currentSleepInstruction;
 }
 
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
