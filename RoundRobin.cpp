@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec) : Scheduler(numCores), quantum(quantum), delays_per_exec (delays_per_exec){
+RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec) : Scheduler(numCores), quantum(quantum), delays_per_exec(delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
     }
@@ -37,7 +37,7 @@ void RRScheduler::schedulerLoop() {
                 coreAvailable[core] = false;
                 processHandler.insertProcess(process);
 
-                
+
 
                 cv.notify_all();
             }
@@ -70,7 +70,7 @@ void RRScheduler::workerLoop(int coreId) {
                     p->updateSleep();
                     if (!p->isSleeping() && !p->isFinished()) {
                         readyQueue.push(p); // Requeue awakened processes
-                        std::cout << "Process " << p->getId() << " woke up\n";
+                        //std::cout << "Process " << p->getId() << " woke up\n";
                     }
                 }
             }
@@ -95,8 +95,8 @@ void RRScheduler::workerLoop(int coreId) {
                 cyclesUsed++;
 
                 if (process->isSleeping()) {
-                    std::cout << "Process " << process->getId()
-                        << " started sleeping\n";
+                    //std::cout << "Process " << process->getId()
+                        //<< " started sleeping\n";
                     break;
                 }
 
@@ -108,7 +108,7 @@ void RRScheduler::workerLoop(int coreId) {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
-                    std::cout << "Process " << process->getId() << " completed\n";
+                    //std::cout << "Process " << process->getId() << " completed\n";
                 }
                 else if (!process->isSleeping()) {
                     readyQueue.push(process); // Requeue if not finished or sleeping

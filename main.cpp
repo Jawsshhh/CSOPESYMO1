@@ -190,7 +190,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 5;
+            int instructionType = rand() % 4;
             switch (instructionType) {
             case 0: {
                 auto printInstr = make_shared<PrintInstruction>(
@@ -237,16 +237,6 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                     src2
                 );
                 process->addInstruction(subInstr);
-                break;
-            }
-            case 4: {
-                uint8_t sleepTicks = 1 + rand() % 10; // Sleep for 1-10 ticks
-
-                auto sleepInstr = make_shared<SleepInstruction>(
-                    process.get(),
-                    sleepTicks
-                );
-                process->addInstruction(sleepInstr);
                 break;
             }
             }
