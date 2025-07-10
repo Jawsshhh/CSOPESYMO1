@@ -2,7 +2,8 @@
 #include <chrono>
 #include <iostream>
 
-RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec) : Scheduler(numCores), quantum(quantum), delays_per_exec (delays_per_exec){
+RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec)
+    : Scheduler(numCores), quantum(quantum), delays_per_exec(delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
     }
@@ -46,22 +47,10 @@ void RRScheduler::workerLoop(int coreId) {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            cv.wait(lock, [this, coreId]() {
-                return !running || !readyQueue.empty() || processHandler.hasUnfinishedProcessOnCore(coreId);
+            cv.wait(lock, [this]() {
+                return !running || !readyQueue.empty();
                 });
             if (!running) break;
-
-            auto allProcs = processHandler.getAllProcesses();
-            for (auto& p : allProcs) {
-                if (p->getAssignedCore() == coreId && p->isSleeping()) {
-                    p->updateSleep();
-                    if (!p->isSleeping() && !p->isFinished()) {
-                        readyQueue.push(p);
-                        std::cout << "Process " << p->getId() << " woke up\n";
-                    }
-                }
-            }
-
 
             if (!readyQueue.empty()) {
                 process = readyQueue.front();
@@ -74,10 +63,8 @@ void RRScheduler::workerLoop(int coreId) {
         if (process) {
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
-                if (process->isSleeping()) break;
                 process->executeNextInstruction();
                 cyclesUsed++;
-                if (process->isSleeping()) break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
@@ -85,9 +72,8 @@ void RRScheduler::workerLoop(int coreId) {
                 std::lock_guard<std::mutex> lock(queueMutex);
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
-                    //std::cout << "Process " << process->getId() << " completed\n";
                 }
-                else if (!process->isSleeping()) {
+                else {
                     readyQueue.push(process);
                 }
                 coreAvailable[coreId] = true;

@@ -22,6 +22,7 @@ SymbolTable::DataType SymbolTable::retrieveDataType(const std::string& varName)
     if (checkVarExists(varName)) {
         return symbolTable.at(varName).dataType;
     }
+    return SymbolTable::DataType::INTEGER;
 }
 
 bool SymbolTable::insertVariable(const std::string& varName, DataType dataType, const std::string& value)

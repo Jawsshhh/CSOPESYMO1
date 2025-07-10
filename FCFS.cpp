@@ -1,7 +1,9 @@
 #include "FCFS.h"
 #include <chrono>
 #include <iostream>
-FCFSScheduler::FCFSScheduler(int numCores, int delays_per_exec) : Scheduler(numCores), delays_per_exec (delays_per_exec) {
+
+FCFSScheduler::FCFSScheduler(int numCores, int delays_per_exec)
+    : Scheduler(numCores), delays_per_exec(delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&FCFSScheduler::workerLoop, this, i);
     }
@@ -16,7 +18,6 @@ void FCFSScheduler::addProcess(std::shared_ptr<Process> process) {
     std::lock_guard<std::mutex> lock(queueMutex);
     processQueue.push(process);
     cv.notify_one();
-
 }
 
 void FCFSScheduler::schedulerLoop() {
@@ -41,7 +42,6 @@ void FCFSScheduler::schedulerLoop() {
     }
 }
 
-
 void FCFSScheduler::workerLoop(int coreId) {
     while (running) {
         std::shared_ptr<Process> process;
@@ -53,20 +53,9 @@ void FCFSScheduler::workerLoop(int coreId) {
                 });
             if (!running) break;
 
-           
-            auto allProcs = processHandler.getAllProcesses();
-            for (auto& p : allProcs) {
-                if (p->getAssignedCore() == coreId && p->isSleeping()) {
-                    p->updateSleep();
-                    if (!p->isSleeping() && !p->isFinished()) {
-                        std::cout << "Process " << p->getId() << " woke up\n";
-                    }
-                }
-            }
-
             auto coreProcs = processHandler.getProcessesByCore(coreId);
             auto it = std::find_if(coreProcs.begin(), coreProcs.end(), [](const auto& p) {
-                return !p->isFinished() && !p->isSleeping();
+                return !p->isFinished();
                 });
             if (it != coreProcs.end()) {
                 process = *it;
@@ -75,13 +64,12 @@ void FCFSScheduler::workerLoop(int coreId) {
 
         if (process) {
             while (!process->isFinished() && running) {
-                if (process->isSleeping()) break;
                 process->executeNextInstruction();
-                if (process->isSleeping()) break;
 
                 auto start = std::chrono::high_resolution_clock::now();
                 while (std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::high_resolution_clock::now() - start).count() < delays_per_exec) {
+                    // Busy wait for delay
                 }
             }
 
@@ -96,4 +84,6 @@ void FCFSScheduler::workerLoop(int coreId) {
         }
     }
 }
+
+
 

@@ -147,17 +147,17 @@ bool Process::isSleeping() const {
     return sleeping && (remainingSleepTicks > 0);
 }
 
-void Process::updateSleep() {
-    if (sleeping && currentSleepInstruction) {
-        std::cout << "[DEBUG] Process " << id << " updateSleep() called. Remaining: "
-            << getRemainingSleepTicks() << "\n";  // TEMP DEBUG
-        currentSleepInstruction->tickLog();
-        if (!currentSleepInstruction->isSleeping()) {
-            sleeping = false;
-            currentSleepInstruction = nullptr;
-        }
-    }
-}
+//void Process::updateSleep() {
+//    if (sleeping && currentSleepInstruction) {
+//        std::cout << "[DEBUG] Process " << id << " updateSleep() called. Remaining: "
+//            << getRemainingSleepTicks() << "\n";  // TEMP DEBUG
+//        currentSleepInstruction->tickLog();
+//        if (!currentSleepInstruction->isSleeping()) {
+//            sleeping = false;
+//            currentSleepInstruction = nullptr;
+//        }
+//    }
+//}
 
 void Process::setSleeping(bool state, uint8_t ticks) {
     std::lock_guard<std::mutex> lock(stateMutex);

@@ -79,6 +79,7 @@ public:
     void execute() override;
     uint16_t getValue(const std::string& var);
     bool checkNumber(const std::string& var);
+    std::string getDetails() const override;
     void subtract();
 private:
     std::string var1;
@@ -90,6 +91,10 @@ class SleepInstruction : public Instruction, public std::enable_shared_from_this
 public:
     SleepInstruction(Process* process, uint8_t x);
     void execute() override;
+    std::string getDetails() const override;
+    std::vector<int> tickLog;    
+    bool isSleeping = false;
+
 private:
     uint8_t x;
 };

@@ -207,12 +207,6 @@ void SubtractInstruction::subtract()
 	process->getSymbolTable().updateVariable(var1, std::to_string(difference));
 }
 
-SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP)
-{
-
-	process->getSymbolTable().updateVariable(var1, std::to_string(result));
-}
-
 std::string SubtractInstruction::getDetails() const {
 	return "SUB " + process->getSymbolTable().retrieveValue(var1) + " = " + var2 + " - " + var3;
 }
@@ -221,10 +215,9 @@ std::string SubtractInstruction::getDetails() const {
 * SLEEP INSTRUCTION
 */
 
-SleepInstruction::SleepInstruction(Process* process, uint8_t x) : Instruction(process, Instruction::InstructionType::SLEEP), 
-	x(x) {	
+SleepInstruction::SleepInstruction(Process* process, uint8_t x)
+	: Instruction(process, Instruction::InstructionType::SLEEP), x(x) {
 }
-
 
 void SleepInstruction::execute()
 {

@@ -20,6 +20,7 @@ using namespace std;
 
 CPUTick cpuTick;
 
+// In main.cpp
 struct Config {
     int num_cpu = 0;
     std::string scheduler = "none";
@@ -28,6 +29,9 @@ struct Config {
     int min_ins = 0;
     int max_ins = 0;
     int delays_per_exec = 0;
+    size_t max_overall_mem = 16384;  
+    size_t mem_per_frame = 16;       
+    size_t mem_per_proc = 4096;      
     bool initialized = false;
     std::atomic<bool> populate_running{ false };
     std::mutex populate_mutex;
@@ -192,7 +196,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 5;
+            int instructionType = rand() % 4;
             switch (instructionType) {
             case 0: {
                 auto printInstr = make_shared<PrintInstruction>(
@@ -241,15 +245,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 process->addInstruction(subInstr);
                 break;
             }
-            case 4: {
-                uint8_t = 1 + rand() % 5;
-                auto sleepInstr = make_shared<SleepInstruction>(
-                    process.get(),
-                    config.batch_process_freq
-                );
-                process->addInstruction(sleepInstr);
-                break;
-            }
+            
             }
         }
 
@@ -298,6 +294,9 @@ int main() {
                         else if (key == "min-ins") iss >> config.min_ins;
                         else if (key == "max-ins") iss >> config.max_ins;
                         else if (key == "delay-per-exec") iss >> config.delays_per_exec;
+                        else if (key == "max-overall-mem") iss >> config.max_overall_mem;
+                        else if (key == "mem-per-frame") iss >> config.mem_per_frame;
+                        else if (key == "mem-per-proc") iss >> config.mem_per_proc;
                     }
                 }
                 config.initialized = true;
