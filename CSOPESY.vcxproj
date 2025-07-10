@@ -131,6 +131,7 @@
     <ClCompile Include="FCFS.cpp" />
     <ClCompile Include="Instruction.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="MessageBuffer.cpp" />
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="ProcessHandler.cpp" />
@@ -141,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="CPUTick.h" />
     <ClInclude Include="FCFS.h" />
+    <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="Instruction.h" />
     <ClInclude Include="MessageBuffer.h" />
     <ClInclude Include="Process.h" />

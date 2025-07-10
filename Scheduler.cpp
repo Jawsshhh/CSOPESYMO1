@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <fstream>
 
-Scheduler::Scheduler(int numCores) : numCores(numCores), running(false) {
-    coreAvailable.resize(numCores, true); 
+Scheduler::Scheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory)
+    : numCores(numCores), running(false), memoryManager(maxMemory, frameSize, procMemory) {
+    coreAvailable.resize(numCores, true);
 }
 
 Scheduler::~Scheduler() {
@@ -86,6 +87,14 @@ void Scheduler::listProcesses() {
         lastPrintedProcessLines.push_back(line);
     }
     lastPrintedProcessLines.push_back("===================\n");
+}
+
+bool MemoryManager::isInMemory(int pid) const {
+    std::lock_guard<std::mutex> lock(memoryMutex);
+    for (const auto& block : memoryBlocks) {
+        if (block.allocated && block.processId == pid) return true;
+    }
+    return false;
 }
 
 

@@ -6,7 +6,7 @@
 
 class FCFSScheduler : public Scheduler {
 public:
-    FCFSScheduler(int numCores, int delays_per_exec);
+    FCFSScheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory, int delays_per_exec);
     ~FCFSScheduler() override;
 
     void addProcess(const std::shared_ptr<Process> process);

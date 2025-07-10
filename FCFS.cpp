@@ -2,13 +2,15 @@
 #include <chrono>
 #include <iostream>
 
-FCFSScheduler::FCFSScheduler(int numCores, int delays_per_exec)
-    : Scheduler(numCores), delays_per_exec(delays_per_exec) {
+FCFSScheduler::FCFSScheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory, int delays_per_exec)
+    : Scheduler(numCores, maxMemory, frameSize, procMemory),
+    delays_per_exec(delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
         workerThreads.emplace_back(&FCFSScheduler::workerLoop, this, i);
     }
     schedulerThread = std::thread(&FCFSScheduler::schedulerLoop, this);
 }
+
 
 FCFSScheduler::~FCFSScheduler() {
     stop();

@@ -1,10 +1,12 @@
 #pragma once
 #include "Scheduler.h"
 #include <queue>
+#include <thread>
 
 class RRScheduler : public Scheduler {
 public:
-    RRScheduler(int numCores, int quantum, int delays_per_exec);
+    RRScheduler(int numCores, int quantum, int delays_per_exec,
+        size_t maxMemory, size_t frameSize, size_t procMemory);
     ~RRScheduler() override;
 
     void addProcess(std::shared_ptr<Process> process);

@@ -1,4 +1,5 @@
 #pragma once
+#include "MemoryManager.h"
 #include "Process.h"
 #include "ProcessHandler.h"
 #include <vector>
@@ -12,7 +13,7 @@
 
 class Scheduler {
 public:
-    Scheduler(int numCores);
+    Scheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory);
     virtual ~Scheduler();
 
     virtual void start();
@@ -33,6 +34,7 @@ protected:
     std::vector<bool> coreAvailable;
     ProcessHandler processHandler;
     std::vector<std::string> lastPrintedProcessLines;
+    MemoryManager memoryManager;
 
     virtual void schedulerLoop() = 0;
     virtual void workerLoop(int coreId) = 0;

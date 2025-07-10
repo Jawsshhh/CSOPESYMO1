@@ -313,13 +313,23 @@ int main() {
 
                 
                 if (config.scheduler == "fcfs") {
-                   scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(config.num_cpu, config.delays_per_exec));
-                   scheduler->start();
+                    scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(
+                        config.num_cpu,
+                        config.max_overall_mem,
+                        config.mem_per_frame,
+                        config.mem_per_proc,
+                        config.delays_per_exec));
+                    scheduler->start();
                 }
                 else if (config.scheduler == "rr") {
-                   scheduler = std::make_unique<RRScheduler>(config.num_cpu, config.quantum_cycles, config.delays_per_exec);
-                   scheduler->start();
-
+                    scheduler = std::make_unique<RRScheduler>(
+                        config.num_cpu,
+                        config.quantum_cycles,
+                        config.delays_per_exec,
+                        config.max_overall_mem,
+                        config.mem_per_frame,
+                        config.mem_per_proc);
+                    scheduler->start();
                 }
             }
             else {

@@ -70,11 +70,7 @@ std::string Process::getCreationTime() const {
 
 
 void Process::executeNextInstruction() {
-    if (delayCount > 0) {
-        delayCount--;
-        return;
-    }
-
+   
     if (currentInstruction < static_cast<int>(instructionList.size())) {
         auto instr = instructionList[currentInstruction++];
 
