@@ -13,7 +13,7 @@
 
 class Scheduler {
 public:
-    Scheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory);
+    Scheduler(int numCores, size_t maxMemory, size_t frameSize);
     virtual ~Scheduler();
 
     virtual void start();

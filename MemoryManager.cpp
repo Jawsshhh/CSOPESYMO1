@@ -6,13 +6,12 @@
 #include <chrono>
 #include <iostream>
 
-MemoryManager::MemoryManager(size_t maxMemory, size_t frameSize, size_t procMemory)
-    : maxMemory(maxMemory), frameSize(frameSize), procMemory(procMemory) {
-    // Initialize with one big free block
+MemoryManager::MemoryManager(size_t maxMemory, size_t frameSize)
+    : maxMemory(maxMemory), frameSize(frameSize) {
     memoryBlocks.push_back({ 0, maxMemory, false, -1 });
 }
 
-bool MemoryManager::allocateMemory(int processId) {
+bool MemoryManager::allocateMemory(int processId, size_t memoryNeeded) {
     std::lock_guard<std::mutex> lock(memoryMutex);
     //std::cout << "[ALLOCATE] PID: " << processId << "\n";
 
@@ -25,19 +24,18 @@ bool MemoryManager::allocateMemory(int processId) {
 
     // First-fit allocation
     for (auto it = memoryBlocks.begin(); it != memoryBlocks.end(); ++it) {
-        if (!it->allocated && it->size >= procMemory) {
-            size_t remaining = it->size - procMemory;
+        if (!it->allocated && it->size >= memoryNeeded) {
+            size_t remaining = it->size - memoryNeeded;
             size_t originalStart = it->start;
 
-            // Update current block to become allocated
-            it->size = procMemory;
+            // Allocate block
+            it->size = memoryNeeded;
             it->allocated = true;
             it->processId = processId;
 
-            // If there is leftover memory, insert a new free block after
             if (remaining > 0) {
                 MemoryBlock freeBlock = {
-                    originalStart + procMemory,
+                    originalStart + memoryNeeded,
                     remaining,
                     false,
                     -1

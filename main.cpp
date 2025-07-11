@@ -188,7 +188,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
         string processName = "process_" + to_string(processCounter++);
 
         // Create the process and screen
-        auto process = make_shared<Process>(processName, processCounter);
+        auto process = make_shared<Process>(processName, processCounter, config.mem_per_proc);
         consoleManager.addNewScreen(processName, process);
 
         // Generate random number of instructions
@@ -317,7 +317,6 @@ int main() {
                         config.num_cpu,
                         config.max_overall_mem,
                         config.mem_per_frame,
-                        config.mem_per_proc,
                         config.delays_per_exec));
                     scheduler->start();
                 }
@@ -327,8 +326,8 @@ int main() {
                         config.quantum_cycles,
                         config.delays_per_exec,
                         config.max_overall_mem,
-                        config.mem_per_frame,
-                        config.mem_per_proc);
+                        config.mem_per_frame
+                        );
                     scheduler->start();
                 }
             }
@@ -345,7 +344,7 @@ int main() {
             }
             else {
                 static int processId = 0;
-                auto process = make_shared<Process>(name, processId++);
+                auto process = make_shared<Process>(name, processId++, config.mem_per_proc);
 
                 consoleManager.addNewScreen(name, process);
                 consoleManager.initializeScreen();

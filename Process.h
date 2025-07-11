@@ -13,9 +13,10 @@
 
 class Process {
 public:
-    Process(const std::string& name, int id);
+    Process(const std::string& name, int id, size_t memoryRequired);
     ~Process();
 
+    size_t getMemoryNeeded();
     std::string getName() const;
     std::string getCreationTime() const;
     int getId() const;
@@ -31,7 +32,7 @@ public:
     void setMaxExecutionDelay(int delay);
     static std::string instructionTypeToString(Instruction::InstructionType type);
     bool isSleeping() const;
-    //void updateSleep();
+    // void updateSleep();
     void setSleeping(bool state, uint8_t ticks = 0);
     int getRemainingSleepTicks() const;
     std::vector<std::string> getLogs() const;

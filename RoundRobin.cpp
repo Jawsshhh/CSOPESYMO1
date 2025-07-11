@@ -3,11 +3,12 @@
 #include <iostream>
 
 RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
-    size_t maxMemory, size_t frameSize, size_t procMemory)
-    : Scheduler(numCores, maxMemory, frameSize, procMemory),
+    size_t maxMemory, size_t frameSize)
+    : Scheduler(numCores, maxMemory, frameSize),
     quantum(quantum),
     delays_per_exec(delays_per_exec) {
     for (int i = 0; i < numCores; ++i) {
+        coreAvailable[i] = true;
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
     }
     schedulerThread = std::thread(&RRScheduler::schedulerLoop, this);
@@ -29,29 +30,13 @@ void RRScheduler::schedulerLoop() {
         cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
         if (!running) break;
 
-        for (int core = 0; core < numCores && !readyQueue.empty(); ++core) {
-            if (coreAvailable[core]) {
-                auto process = readyQueue.front();
-
-                //  try allocating memory before assigning to core
-                if (memoryManager.allocateMemory(process->getId())) {
-                    readyQueue.pop();
-                    process->setAssignedCore(core);
-                    coreAvailable[core] = false;
-                    processHandler.insertProcess(process);
-                    cv.notify_all();
-                }
-                else {
-                    readyQueue.pop();
-                    readyQueue.push(process);
-                }
-            }
-        }
-
+        cv.notify_all();  // Wake up all worker threads
         lock.unlock();
+
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+
 
 
 void RRScheduler::workerLoop(int coreId) {
@@ -60,30 +45,39 @@ void RRScheduler::workerLoop(int coreId) {
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            cv.wait(lock, [this]() {
-                return !readyQueue.empty() || !running;
-                });
-
+            cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
             if (!running) break;
 
-            // Always pop the next available process for this quantum
-            process = readyQueue.front();
-            readyQueue.pop();
-
-            // Try to allocate memory (only if process is new)
-            if (!memoryManager.isInMemory(process->getId())) {
-                if (!memoryManager.allocateMemory(process->getId())) {
-                    std::cout << "[WARN] PID " << process->getId()
-                        << " couldn't allocate memory, requeuing\n";
-                    // No memory: move to back and skip this round
-                    readyQueue.push(process);
-                    process = nullptr;
+            // Fair turn-based access per core
+            {
+                std::unique_lock<std::mutex> turnLock(coreTurnMutex);
+                if (coreId != nextCoreId) {
+                    continue;  // Not this core's turn
                 }
             }
 
-            if (process) {
+            while (!readyQueue.empty()) {
+                auto candidate = readyQueue.front();
+                readyQueue.pop();
+
+                if (!memoryManager.isInMemory(candidate->getId())) {
+                    if (!memoryManager.allocateMemory(candidate->getId(), candidate->getMemoryNeeded())) {
+                        readyQueue.push(candidate);
+                        continue;
+                    }
+                }
+
+                process = candidate;
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
+                processHandler.insertProcess(process);
+                break;
+            }
+
+            // Round-robin core access
+            {
+                std::unique_lock<std::mutex> turnLock(coreTurnMutex);
+                nextCoreId = (nextCoreId + 1) % numCores;
             }
         }
 
@@ -92,7 +86,6 @@ void RRScheduler::workerLoop(int coreId) {
             while (cyclesUsed < quantum && !process->isFinished() && running) {
                 process->executeNextInstruction();
                 cyclesUsed++;
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
@@ -104,7 +97,6 @@ void RRScheduler::workerLoop(int coreId) {
                     memoryManager.deallocateMemory(process->getId());
                 }
                 else {
-                    // Push back for RR rotation
                     readyQueue.push(process);
                 }
 
@@ -112,6 +104,12 @@ void RRScheduler::workerLoop(int coreId) {
             }
 
             cv.notify_all();
+
+            if (coreId == 0 && cyclesUsed > 0) {
+                std::lock_guard<std::mutex> snapLock(snapshotMutex);
+                std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
+                memoryManager.generateMemorySnapshot(filename, quantumCycle);
+            }
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

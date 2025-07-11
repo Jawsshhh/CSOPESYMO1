@@ -4,7 +4,7 @@
 
 std::mutex Process::fileMutex;
 
-Process::Process(const std::string& name, int id) : name(name), id(id) {
+Process::Process(const std::string& name, int id, size_t memoryRequired) : name(name), id(id), memoryRequired(memoryRequired) {
     time_t now = time(nullptr);
     tm local;
     localtime_s(&local, &now);
@@ -24,6 +24,9 @@ Process::~Process() {
         logFile.flush();  
         logFile.close();
     }
+}
+size_t Process::getMemoryNeeded() {
+    return memoryRequired;
 }
 
 int Process::getId() const {

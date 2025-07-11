@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <fstream>
 
-Scheduler::Scheduler(int numCores, size_t maxMemory, size_t frameSize, size_t procMemory)
-    : numCores(numCores), running(false), memoryManager(maxMemory, frameSize, procMemory) {
+Scheduler::Scheduler(int numCores, size_t maxMemory, size_t frameSize)
+    : numCores(numCores), running(false), memoryManager(maxMemory, frameSize) {
     coreAvailable.resize(numCores, true);
 }
 

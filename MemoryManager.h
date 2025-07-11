@@ -6,9 +6,9 @@
 
 class MemoryManager {
 public:
-    MemoryManager(size_t maxMemory, size_t frameSize, size_t procMemory);
+    MemoryManager(size_t maxMemory, size_t frameSize);
 
-    bool allocateMemory(int processId);
+    bool allocateMemory(int processId, size_t memoryNeeded);
     void deallocateMemory(int processId);
     void generateMemorySnapshot(const std::string& filename, int quantumCycle) const;
     bool isInMemory(int pid) const;
@@ -24,7 +24,6 @@ private:
 
     size_t maxMemory;
     size_t frameSize;
-    size_t procMemory;
     std::vector<MemoryBlock> memoryBlocks;
     mutable std::mutex memoryMutex;
 
