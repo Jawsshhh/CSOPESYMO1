@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <unordered_set>
 
 Scheduler::Scheduler(int numCores, size_t maxMemory, size_t frameSize)
     : numCores(numCores), running(false), memoryManager(maxMemory, frameSize) {
@@ -65,9 +66,16 @@ void Scheduler::listProcesses() {
     std::cout << runningHeader << "\n";
     lastPrintedProcessLines.push_back(runningHeader);
 
+    std::unordered_set<int> printedProcessIds;
+
     for (const auto& process : runningProcs) {
+        int pid = process->getId();
+        if (printedProcessIds.count(pid)) continue;  // skip duplicate
+
+        printedProcessIds.insert(pid);
+
         std::string processLog = "  " + process->getName() +
-            " (ID: " + std::to_string(process->getId()) + ")  (" + process->getCreationTime() +
+            " (ID: " + std::to_string(pid) + ")  (" + process->getCreationTime() +
             ")  on Core: " + std::to_string(process->getAssignedCore()) +
             "  " + std::to_string(process->getCurrentInstructionIndex()) + "/" +
             std::to_string(process->getInstructionCount());
@@ -75,6 +83,7 @@ void Scheduler::listProcesses() {
         std::cout << processLog << "\n";
         lastPrintedProcessLines.push_back(processLog);
     }
+
 
     std::string finishedHeader = "\nFinished processes (" + std::to_string(finishedProcs.size()) + "):";
     std::cout << finishedHeader << "\n";

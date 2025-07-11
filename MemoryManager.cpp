@@ -13,42 +13,52 @@ MemoryManager::MemoryManager(size_t maxMemory, size_t frameSize)
 
 bool MemoryManager::allocateMemory(int processId, size_t memoryNeeded) {
     std::lock_guard<std::mutex> lock(memoryMutex);
-    //std::cout << "[ALLOCATE] PID: " << processId << "\n";
 
+    // Prevent allocating again if already allocated
     for (const auto& block : memoryBlocks) {
         if (block.allocated && block.processId == processId) {
-           // std::cout << "[WARN] Duplicate allocation attempt for PID " << processId << "\n";
-            return false; // Prevent duplicate allocation
+            return false;
         }
     }
 
-    // First-fit allocation
     for (auto it = memoryBlocks.begin(); it != memoryBlocks.end(); ++it) {
         if (!it->allocated && it->size >= memoryNeeded) {
-            size_t remaining = it->size - memoryNeeded;
             size_t originalStart = it->start;
+            size_t originalSize = it->size;
 
-            // Allocate block
-            it->size = memoryNeeded;
-            it->allocated = true;
-            it->processId = processId;
+            // Replace the current block with an allocated block
+            MemoryBlock allocatedBlock = {
+                originalStart,
+                memoryNeeded,
+                true,
+                processId
+            };
 
-            if (remaining > 0) {
-                MemoryBlock freeBlock = {
-                    originalStart + memoryNeeded,
-                    remaining,
-                    false,
-                    -1
-                };
-                memoryBlocks.insert(it + 1, freeBlock);
+            // Create the remaining free block (if any)
+            MemoryBlock remainingBlock = {
+                originalStart + memoryNeeded,
+                originalSize - memoryNeeded,
+                false,
+                -1
+            };
+
+            // Replace the current block
+            it = memoryBlocks.erase(it);
+            it = memoryBlocks.insert(it, allocatedBlock);
+
+            // Insert the remaining free block if space is left
+            if (remainingBlock.size > 0) {
+                memoryBlocks.insert(std::next(it), remainingBlock);
             }
 
             return true;
         }
     }
 
-    return false; // No suitable block found
+    return false; // No free space found
 }
+
+
 void MemoryManager::deallocateMemory(int processId) {
     std::lock_guard<std::mutex> lock(memoryMutex);
     for (auto it = memoryBlocks.begin(); it != memoryBlocks.end(); ++it) {
@@ -90,7 +100,12 @@ size_t MemoryManager::calculateFragmentation() const {
 }
 
 void MemoryManager::generateMemorySnapshot(const std::string& filename, int quantumCycle) const {
+    
+
     std::lock_guard<std::mutex> lock(memoryMutex);
+
+   
+
     std::ofstream outFile(filename);
 
     if (!outFile.is_open()) {

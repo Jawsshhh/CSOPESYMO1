@@ -56,17 +56,25 @@ void RRScheduler::workerLoop(int coreId) {
                 }
             }
 
-            while (!readyQueue.empty()) {
+            // Try to find a process that can run (with memory allocated)
+            size_t attempts = 0;
+            const size_t queueSize = readyQueue.size();
+            
+            while (attempts < queueSize) {
                 auto candidate = readyQueue.front();
                 readyQueue.pop();
+                attempts++;
 
                 if (!memoryManager.isInMemory(candidate->getId())) {
-                    if (!memoryManager.allocateMemory(candidate->getId(), candidate->getMemoryNeeded())) {
+                    if (!memoryManager.allocateMemory(candidate->getId(), 
+                                                     candidate->getMemoryNeeded())) {
+                        // Can't allocate now, put it back
                         readyQueue.push(candidate);
                         continue;
                     }
                 }
 
+                // Found a runnable process
                 process = candidate;
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
@@ -97,6 +105,7 @@ void RRScheduler::workerLoop(int coreId) {
                     memoryManager.deallocateMemory(process->getId());
                 }
                 else {
+                    // Only requeue if not finished
                     readyQueue.push(process);
                 }
 
@@ -105,6 +114,7 @@ void RRScheduler::workerLoop(int coreId) {
 
             cv.notify_all();
 
+            // Generate snapshot from core 0
             if (coreId == 0 && cyclesUsed > 0) {
                 std::lock_guard<std::mutex> snapLock(snapshotMutex);
                 std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";

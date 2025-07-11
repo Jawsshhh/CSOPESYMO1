@@ -73,22 +73,23 @@ std::string Process::getCreationTime() const {
 
 
 void Process::executeNextInstruction() {
-   
     if (currentInstruction < static_cast<int>(instructionList.size())) {
         auto instr = instructionList[currentInstruction++];
 
-        // Execute first to ensure any state changes happen
         instr->execute();
 
-        // Log after execution with full details
         logInstruction(
             instructionTypeToString(instr->getInstructionType()),
             instr->getDetails()
         );
 
-        delayCount = maxExecDelay;
+    }
+
+    if (currentInstruction >= static_cast<int>(instructionList.size())) {
+        isFinishedFlag = true;
     }
 }
+
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
     // Only log PRINT instructions

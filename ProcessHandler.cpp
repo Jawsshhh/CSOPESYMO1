@@ -49,13 +49,35 @@ std::vector<std::shared_ptr<Process>> ProcessHandler::getAllProcesses() {
 
 std::vector<std::shared_ptr<Process>> ProcessHandler::getRunningProcesses() {
     std::lock_guard<std::mutex> lock(processMutex);
-    return running;
+
+    std::unordered_set<int> seenIds;
+    std::vector<std::shared_ptr<Process>> uniqueRunning;
+
+    for (const auto& p : running) {
+        if (seenIds.insert(p->getId()).second) {
+            uniqueRunning.push_back(p);
+        }
+    }
+
+    return uniqueRunning;
 }
+
 
 std::vector<std::shared_ptr<Process>> ProcessHandler::getFinishedProcesses() {
     std::lock_guard<std::mutex> lock(processMutex);
-    return finished;
+
+    std::unordered_set<int> seenIds;
+    std::vector<std::shared_ptr<Process>> uniqueFinished;
+
+    for (const auto& p : finished) {
+        if (seenIds.insert(p->getId()).second) {
+            uniqueFinished.push_back(p);
+        }
+    }
+
+    return uniqueFinished;
 }
+
 
 std::vector<std::shared_ptr<Process>> ProcessHandler::getProcessesByCore(int coreId) {
     std::lock_guard<std::mutex> lock(processMutex);
@@ -90,12 +112,16 @@ std::shared_ptr<Process> ProcessHandler::getFirstUnfinishedProcessOnCore(int cor
 
 void ProcessHandler::markProcessFinished(int processId) {
     std::lock_guard<std::mutex> lock(processMutex);
-    for (auto it = running.begin(); it != running.end(); ++it) {
+
+    auto it = running.begin();
+    while (it != running.end()) {
         if ((*it)->getId() == processId) {
             (*it)->setFinished(true);
-            finished.push_back(*it);       // move to finished
-            running.erase(it);             // remove from running
-            break;
+            finished.push_back(*it);
+            it = running.erase(it);  // Remove and continue
+        }
+        else {
+            ++it;
         }
     }
 }
