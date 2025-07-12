@@ -40,13 +40,20 @@ void Scheduler::listProcesses() {
     std::lock_guard<std::mutex> lock(queueMutex);
     lastPrintedProcessLines.clear();
 
-    auto runningProcs = processHandler.getRunningProcesses();
+     auto runningProcs = processHandler.getCurrentlyActiveProcessesPerCore(numCores);
+    //auto runningProcs = processHandler.getRunningProcesses();
     auto finishedProcs = processHandler.getFinishedProcesses();
 
-    int coresUsed = 0;
-    for (bool available : coreAvailable) {
-        if (!available) coresUsed++;
+    /*int coresUsed = 0;
+   for (bool available : coreAvailable) {
+       if (!available) coresUsed++;
+   }*/
+    std::unordered_set<int> usedCores;
+    for (const auto& p : runningProcs) {
+        usedCores.insert(p->getAssignedCore());
     }
+    int coresUsed = static_cast<int>(usedCores.size());
+
     int coresAvailable = numCores - coresUsed;
     int cpuUtilization = static_cast<int>((static_cast<float>(coresUsed) / numCores) * 100);
 

@@ -27,6 +27,9 @@ public:
     std::shared_ptr<Process> getFirstUnfinishedProcessOnCore(int coreId);
 
     void markProcessFinished(int processId);
+
+    std::vector<std::shared_ptr<Process>> getCurrentlyActiveProcessesPerCore(int numCores);
+
 };
 
 #endif

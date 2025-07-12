@@ -2,10 +2,23 @@
 #include <unordered_set>
 #include "ProcessHandler.h"
 
+//void ProcessHandler::insertProcess(const std::shared_ptr<Process>& process) {
+//    std::lock_guard<std::mutex> lock(processMutex);
+//    running.push_back(process);
+//}
+
 void ProcessHandler::insertProcess(const std::shared_ptr<Process>& process) {
     std::lock_guard<std::mutex> lock(processMutex);
+
+    for (const auto& p : running) {
+        if (p->getId() == process->getId()) {
+            return; // Already recorded
+        }
+    }
+
     running.push_back(process);
 }
+
 
 bool ProcessHandler::deleteProcess(int processId) {
     std::lock_guard<std::mutex> lock(processMutex);
@@ -125,3 +138,25 @@ void ProcessHandler::markProcessFinished(int processId) {
         }
     }
 }
+
+std::vector<std::shared_ptr<Process>> ProcessHandler::getCurrentlyActiveProcessesPerCore(int numCores) {
+    std::lock_guard<std::mutex> lock(processMutex);
+    std::vector<std::shared_ptr<Process>> active(numCores);
+
+    for (const auto& process : running) {
+        int core = process->getAssignedCore();
+        if (core >= 0 && core < numCores && !process->isFinished()) {
+            if (!active[core]) {
+                active[core] = process;
+            }
+        }
+    }
+
+    // Filter out nulls
+    std::vector<std::shared_ptr<Process>> result;
+    for (const auto& p : active) {
+        if (p) result.push_back(p);
+    }
+    return result;
+}
+
