@@ -24,6 +24,7 @@ public:
     int getAssignedCore() const;
     int getCurrentInstructionIndex() const;
     size_t getInstructionCount() const;
+    int getMemorySize() const; // Added for memory size
 
     void executeNextInstruction();
     void addInstruction(std::shared_ptr<Instruction> instruction);
@@ -62,7 +63,8 @@ private:
     std::shared_ptr<SleepInstruction> currentSleepInstruction;
     size_t memoryRequired;
 
-
     int delayCount = 0;
     int maxExecDelay = 0;
+
+    int memorySize;
 };

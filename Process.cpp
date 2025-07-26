@@ -71,6 +71,11 @@ std::string Process::getCreationTime() const {
     return creationTime;
 }
 
+int Process::getMemorySize() const
+{
+    return memorySize;
+}
+
 
 void Process::executeNextInstruction() {
     if (currentInstruction < static_cast<int>(instructionList.size())) {

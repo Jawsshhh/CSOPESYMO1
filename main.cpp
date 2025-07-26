@@ -44,16 +44,19 @@ public:
     void setCurrentLine(const int currentLine) { this->currentLine = currentLine; };
     void setTotalLines(const int totalLines) { this->totalLines = totalLines; };
     void setTimestamp(const std::string& timestamp) { this->timestamp = timestamp; };
+    void setMemorySize(int size) { this->memorySize = size; }
     string getName() const { return name; };
     int getCurrentLine() const { return currentLine; };
     int getTotalLines() const { return totalLines; };
     string getTimestamp() const { return timestamp; };
+    size_t getMemorySize() const { return memorySize; };
 
 private:
     std::string name;
     int currentLine = 0;
     int totalLines = 0;
     std::string timestamp;
+    size_t memorySize = 0;
 };
 
 class MainConsole : public ConsoleGeneral {
@@ -87,10 +90,11 @@ public:
         setTimestamp(ss.str());
     };
 
-    Screen(const std::string& name, int currentLine = 1, int totalLines = 100) {
+    Screen(const std::string& name, int currentLine = 1, int totalLines = 100, int memorySize = 0) {
         setName(name);
         setCurrentLine(currentLine);
         setTotalLines(totalLines);
+        setMemorySize(memorySize); // Sets memory size
         time_t now = time(nullptr);
         tm local;
         localtime_s(&local, &now);
@@ -104,6 +108,7 @@ public:
         cout << "\n==== Screen Session ====\n";
         cout << "Process Name: " << getName() << "\n";
         cout << "Line: " << getCurrentLine() << "/" << getTotalLines() << "\n";
+        cout << "Memory Size: " << getMemorySize() << "\n";
         cout << "Created On: " << getTimestamp() << "\n";
         cout << "========================\n";
         cout << "Type 'exit' to return to the main menu.\n\n";
@@ -126,8 +131,8 @@ public:
         system("CLS");
     };
 
-    void addNewScreen(const std::string& name, std::shared_ptr<Process> process = nullptr) {
-        screenSessions[name] = make_shared<Screen>(name, 1, 100);
+    void addNewScreen(const std::string& name, std::shared_ptr<Process> process = nullptr, size_t memorySize = 0) {
+        screenSessions[name] = make_shared<Screen>(name, 1, 100, memorySize);
         if (process) {
             screenProcesses[name] = process;
         }
@@ -155,6 +160,13 @@ public:
 
     bool findScreenSessions(const std::string& name) {
         if (screenSessions.find(name) != screenSessions.end()) {
+            return true;
+        }
+        return false;
+    }
+
+    bool memorySizeCheck(const int memorySize) {
+        if (memorySize > 65536) {
             return true;
         }
         return false;
@@ -189,7 +201,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Create the process and screen
         auto process = make_shared<Process>(processName, processCounter, config.mem_per_proc);
-        consoleManager.addNewScreen(processName, process);
+        consoleManager.addNewScreen(processName, process, config.mem_per_proc);      // Not sure if tama 'to....
 
         // Generate random number of instructions
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
@@ -337,16 +349,26 @@ int main() {
         }
 
         else if (inputCommand.rfind("screen -s ", 0) == 0) {
-            string name = inputCommand.substr(10);
+            // string name = inputCommand.substr(10);
+            std::istringstream iss(inputCommand.substr(10));
+            string name;
+            size_t memorySize = 64;    // Do we set default value if no memSize was inputted?
 
+            iss >> name >> memorySize;
+            name = trim(name);
             if (consoleManager.findScreenSessions(name)) {
                 cout << "Screen already exists. Please type another name.\n";
             }
+
+            else if (consoleManager.memorySizeCheck(memorySize)) {
+                cout << "Invalid memory allocation. Memory size exceeds maximum limit (65536 bytes). Please try again\n";
+            }
+            
             else {
                 static int processId = 0;
-                auto process = make_shared<Process>(name, processId++, config.mem_per_proc);
+                auto process = make_shared<Process>(name, processId++, config.mem_per_proc);   
 
-                consoleManager.addNewScreen(name, process);
+                consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
 
                 string subCommand;
@@ -382,6 +404,13 @@ int main() {
                 }
             }
         }
+
+        // Added "screen -c"
+        else if (inputCommand.rfind("screen -c ", 0) == 0) {
+           
+        }
+
+
         else if (inputCommand.rfind("screen -r ", 0) == 0) {
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
@@ -431,7 +460,8 @@ int main() {
                 
             }
         }
-            
+
+
         else if (inputCommand == "scheduler-start") {
             if (!config.initialized) {
                 cout << "Error: System not initialized. Use 'initialize' first.\n";
@@ -477,12 +507,20 @@ int main() {
                 scheduler->generateReport("csopesy.txt");
             }
         }
-
         else if (inputCommand == "screen -ls") {
             if(scheduler){
                 scheduler->listProcesses();
             }
-         }
+        }
+
+        else if (inputCommand == "process-smi") { // NEW
+            std::cout << "Doing something.";
+        }
+
+        else if (inputCommand == "vmstat") { // NEW
+            std::cout << "Doing something.";
+        }
+
         else if (inputCommand == "clear") {
             consoleManager.destroyScreen();
             consoleManager.switchConsole("MAIN");
@@ -499,6 +537,7 @@ int main() {
         else {
             cout << "Unknown command. Try again.\n";
         }
+
     }
     cpuTick.stop();
     return 0;
