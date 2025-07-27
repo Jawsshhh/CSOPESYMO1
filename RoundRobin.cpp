@@ -116,9 +116,9 @@ void RRScheduler::workerLoop(int coreId) {
 
             // Generate snapshot from core 0
             if (coreId == 0 && cyclesUsed > 0) {
-                std::lock_guard<std::mutex> snapLock(snapshotMutex);
-                std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
-                memoryManager.generateMemorySnapshot(filename, quantumCycle);
+               // std::lock_guard<std::mutex> snapLock(snapshotMutex);
+               // std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
+                //memoryManager.generateMemorySnapshot(filename, quantumCycle);
             }
         }
 

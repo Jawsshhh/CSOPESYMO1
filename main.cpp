@@ -31,7 +31,8 @@ struct Config {
     int delays_per_exec = 0;
     size_t max_overall_mem = 16384;  
     size_t mem_per_frame = 16;       
-    size_t mem_per_proc = 4096;      
+    size_t min_mem_per_proc = 2048;      
+    size_t max_mem_per_proc = 4096;
     bool initialized = false;
     std::atomic<bool> populate_running{ false };
     std::mutex populate_mutex;
@@ -200,8 +201,10 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
         string processName = "process_" + to_string(processCounter++);
 
         // Create the process and screen
-        auto process = make_shared<Process>(processName, processCounter, config.mem_per_proc);
-        consoleManager.addNewScreen(processName, process, config.mem_per_proc);      // Not sure if tama 'to....
+        size_t mem_per_proc = config.min_mem_per_proc + rand() % (config.max_mem_per_proc - config.min_mem_per_proc + 1);
+
+        auto process = make_shared<Process>(processName, processCounter, mem_per_proc);
+        consoleManager.addNewScreen(processName, process, mem_per_proc);      // Not sure if tama 'to....
 
         // Generate random number of instructions
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
@@ -308,7 +311,9 @@ int main() {
                         else if (key == "delay-per-exec") iss >> config.delays_per_exec;
                         else if (key == "max-overall-mem") iss >> config.max_overall_mem;
                         else if (key == "mem-per-frame") iss >> config.mem_per_frame;
-                        else if (key == "mem-per-proc") iss >> config.mem_per_proc;
+                        else if (key == "min-mem-per-proc") iss >> config.min_mem_per_proc;
+                        else if (key == "max-mem-per-proc") iss >> config.max_mem_per_proc;
+
                     }
                 }
                 config.initialized = true;
@@ -321,7 +326,18 @@ int main() {
                     << "Batch process frequency: " << config.batch_process_freq << " CPU cycles\n"
                     << "Minimum instructions per process: " << config.min_ins << "\n"
                     << "Maximum instructions per process: " << config.max_ins << "\n"
-                    << "Delay per execution: " << config.delays_per_exec << " CPU cycles\n";
+                    << "Delay per execution: " << config.delays_per_exec << " CPU cycles\n"
+                    << "Maximum memory: " << config.max_overall_mem << "\n"
+                    << "Memory per frame: " << config.mem_per_frame << "\n"
+                    << "Minimum process memory: " << config.min_mem_per_proc << "\n"
+                    << "Maxiimum process memory: " << config.max_mem_per_proc << "\n";
+
+
+
+
+
+
+
 
                 
                 if (config.scheduler == "fcfs") {
@@ -366,7 +382,9 @@ int main() {
             
             else {
                 static int processId = 0;
-                auto process = make_shared<Process>(name, processId++, config.mem_per_proc);   
+                size_t mem_per_proc = config.min_mem_per_proc + rand() % (config.max_mem_per_proc - config.min_mem_per_proc + 1);
+
+                auto process = make_shared<Process>(name, processId++, mem_per_proc);   
 
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
