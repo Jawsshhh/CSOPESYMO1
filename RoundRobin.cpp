@@ -1,12 +1,14 @@
 #include "RoundRobin.h"
 #include <chrono>
 #include <iostream>
+#include <cmath> // for instruction/page conversion
 
 RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     size_t maxMemory, size_t frameSize)
     : Scheduler(numCores, maxMemory, frameSize),
     quantum(quantum),
-    delays_per_exec(delays_per_exec) {
+    delays_per_exec(delays_per_exec),
+    frameSize(frameSize) { // store frameSize locally
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
@@ -37,9 +39,9 @@ void RRScheduler::schedulerLoop() {
     }
 }
 
-
-
 void RRScheduler::workerLoop(int coreId) {
+    constexpr int estimatedInstructionSize = 4; // You may fine-tune this later
+
     while (running) {
         std::shared_ptr<Process> process = nullptr;
 
@@ -56,25 +58,15 @@ void RRScheduler::workerLoop(int coreId) {
                 }
             }
 
-            // Try to find a process that can run (with memory allocated)
+            // Try to find a process to run
             size_t attempts = 0;
             const size_t queueSize = readyQueue.size();
-            
+
             while (attempts < queueSize) {
                 auto candidate = readyQueue.front();
                 readyQueue.pop();
                 attempts++;
 
-                if (!memoryManager.isInMemory(candidate->getId())) {
-                    if (!memoryManager.allocateMemory(candidate->getId(), 
-                                                     candidate->getMemoryNeeded())) {
-                        // Can't allocate now, put it back
-                        readyQueue.push(candidate);
-                        continue;
-                    }
-                }
-
-                // Found a runnable process
                 process = candidate;
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
@@ -92,6 +84,14 @@ void RRScheduler::workerLoop(int coreId) {
         if (process) {
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
+                int instructionIndex = process->getCurrentInstructionIndex();
+                int page = instructionIndex / (frameSize / estimatedInstructionSize);
+
+                if (!memoryManager.accessPage(process->getId(), page)) {
+                    memoryManager.pageFault(process->getId(), page);
+                    continue; // Retry after page fault
+                }
+
                 process->executeNextInstruction();
                 cyclesUsed++;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
@@ -102,11 +102,10 @@ void RRScheduler::workerLoop(int coreId) {
 
                 if (process->isFinished()) {
                     processHandler.markProcessFinished(process->getId());
-                    memoryManager.deallocateMemory(process->getId());
+                    // No deallocateMemory() — paging handles this dynamically
                 }
                 else {
-                    // Only requeue if not finished
-                    readyQueue.push(process);
+                    readyQueue.push(process); // Requeue if not finished
                 }
 
                 coreAvailable[coreId] = true;
@@ -116,9 +115,9 @@ void RRScheduler::workerLoop(int coreId) {
 
             // Generate snapshot from core 0
             if (coreId == 0 && cyclesUsed > 0) {
-               // std::lock_guard<std::mutex> snapLock(snapshotMutex);
-               // std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
-                //memoryManager.generateMemorySnapshot(filename, quantumCycle);
+                std::lock_guard<std::mutex> snapLock(snapshotMutex);
+                std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
+                memoryManager.generateSnapshot(filename, quantumCycle);
             }
         }
 

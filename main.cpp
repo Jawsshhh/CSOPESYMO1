@@ -2,6 +2,8 @@
 #include <string>
 #include <cstdlib>
 #include <memory>
+#include <random>
+
 using namespace std;
 
 #include <map>
@@ -59,6 +61,9 @@ private:
     std::string timestamp;
     size_t memorySize = 0;
 };
+
+static std::random_device rd;
+static std::mt19937 gen(rd());
 
 class MainConsole : public ConsoleGeneral {
 public:
@@ -166,7 +171,7 @@ public:
         return false;
     }
 
-    bool memorySizeCheck(const int memorySize) {
+    bool memorySizeCheck(const size_t memorySize) {
         if (memorySize > 65536) {
             return true;
         }
@@ -193,6 +198,20 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
+size_t getRandomMemorySize(size_t min_mem, size_t max_mem) {
+    // Calculate number of possible power-of-2 sizes
+    int min_exp = log2(min_mem);
+    int max_exp = log2(max_mem);
+    int num_options = max_exp - min_exp + 1;
+
+    // Generate random exponent
+    std::uniform_int_distribution<> dist(0, num_options - 1);
+    int random_exp = min_exp + dist(gen);
+
+    // Return 2^random_exp
+    return static_cast<size_t>(1) << random_exp;
+}
+
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
     static int processCounter = 0;  // Counter for unique process names
 
@@ -201,7 +220,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
         string processName = "process_" + to_string(processCounter++);
 
         // Create the process and screen
-        size_t mem_per_proc = config.min_mem_per_proc + rand() % (config.max_mem_per_proc - config.min_mem_per_proc + 1);
+        size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
         auto process = make_shared<Process>(processName, processCounter, mem_per_proc);
         consoleManager.addNewScreen(processName, process, mem_per_proc);      // Not sure if tama 'to....
@@ -382,7 +401,7 @@ int main() {
             
             else {
                 static int processId = 0;
-                size_t mem_per_proc = config.min_mem_per_proc + rand() % (config.max_mem_per_proc - config.min_mem_per_proc + 1);
+                size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
                 auto process = make_shared<Process>(name, processId++, mem_per_proc);   
 

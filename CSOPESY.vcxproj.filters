@@ -45,7 +45,7 @@
     <ClCompile Include="CPUTick.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MemoryManager.cpp">
+    <ClCompile Include="DemandPaging.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,7 +77,7 @@
     <ClInclude Include="CPUTick.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryManager.h">
+    <ClInclude Include="DemandPaging.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

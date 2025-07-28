@@ -1,5 +1,5 @@
 #pragma once
-#include "MemoryManager.h"
+#include "DemandPaging.h"
 #include "Process.h"
 #include "ProcessHandler.h"
 #include <vector>
@@ -34,7 +34,7 @@ protected:
     std::vector<bool> coreAvailable;
     ProcessHandler processHandler;
     std::vector<std::string> lastPrintedProcessLines;
-    MemoryManager memoryManager;
+    DemandPagingAllocator memoryManager;
 
     virtual void schedulerLoop() = 0;
     virtual void workerLoop(int coreId) = 0;

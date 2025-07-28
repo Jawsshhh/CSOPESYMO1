@@ -13,6 +13,7 @@ public:
     void addProcess(std::shared_ptr<Process> process);
 
 private:
+    size_t frameSize;
     void schedulerLoop() override;
     void workerLoop(int coreId) override;
     int delays_per_exec;

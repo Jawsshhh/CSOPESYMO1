@@ -128,10 +128,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CPUTick.cpp" />
+    <ClCompile Include="DemandPaging.cpp" />
     <ClCompile Include="FCFS.cpp" />
     <ClCompile Include="Instruction.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="MessageBuffer.cpp" />
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="ProcessHandler.cpp" />
@@ -141,8 +141,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPUTick.h" />
+    <ClInclude Include="DemandPaging.h" />
     <ClInclude Include="FCFS.h" />
-    <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="Instruction.h" />
     <ClInclude Include="MessageBuffer.h" />
     <ClInclude Include="Process.h" />

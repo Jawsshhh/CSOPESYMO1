@@ -105,14 +105,6 @@ void Scheduler::listProcesses() {
     lastPrintedProcessLines.push_back("===================\n");
 }
 
-bool MemoryManager::isInMemory(int pid) const {
-    std::lock_guard<std::mutex> lock(memoryMutex);
-    for (const auto& block : memoryBlocks) {
-        if (block.allocated && block.processId == pid) return true;
-    }
-    return false;
-}
-
 
 void Scheduler::generateReport(const std::string& filename) {
     std::lock_guard<std::mutex> lock(queueMutex);
