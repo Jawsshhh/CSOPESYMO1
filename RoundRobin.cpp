@@ -2,6 +2,8 @@
 #include <chrono>
 #include <iostream>
 #include <cmath> // for instruction/page conversion
+#include <algorithm>
+
 
 RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     size_t maxMemory, size_t frameSize)
@@ -85,8 +87,10 @@ void RRScheduler::workerLoop(int coreId) {
             unsigned cyclesUsed = 0;
             while (cyclesUsed < quantum && !process->isFinished() && running) {
                 int instructionIndex = process->getCurrentInstructionIndex();
-                int page = instructionIndex / (frameSize / estimatedInstructionSize);
+                int pageChunkSize = std::max(1, static_cast<int>(frameSize / estimatedInstructionSize));
+                int page = instructionIndex / pageChunkSize;
 
+               
                 if (!memoryManager.accessPage(process->getId(), page)) {
                     memoryManager.pageFault(process->getId(), page);
                     continue; // Retry after page fault

@@ -2,6 +2,8 @@
 #include "Scheduler.h"
 #include <queue>
 #include <thread>
+#include <algorithm>
+
 
 
 class RRScheduler : public Scheduler {
