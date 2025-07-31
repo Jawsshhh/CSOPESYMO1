@@ -172,7 +172,14 @@ public:
     }
 
     bool memorySizeCheck(const size_t memorySize) {
-        if (memorySize > 65536) {
+        if (memorySize < 64 || memorySize > 65536) {
+            return true;
+        }
+        return false;
+    }
+
+    bool instructionSizeCheck(const size_t instructionSize) {
+        if (instructionSize < 1 || instructionSize > 50) {
             return true;
         }
         return false;
@@ -349,7 +356,7 @@ int main() {
                     << "Maximum memory: " << config.max_overall_mem << "\n"
                     << "Memory per frame: " << config.mem_per_frame << "\n"
                     << "Minimum process memory: " << config.min_mem_per_proc << "\n"
-                    << "Maxiimum process memory: " << config.max_mem_per_proc << "\n";
+                    << "Maximum process memory: " << config.max_mem_per_proc << "\n";
 
 
 
@@ -387,7 +394,7 @@ int main() {
             // string name = inputCommand.substr(10);
             std::istringstream iss(inputCommand.substr(10));
             string name;
-            size_t memorySize = 64;    // Do we set default value if no memSize was inputted?
+            size_t memorySize;    // Do we set default value if no memSize was inputted?
 
             iss >> name >> memorySize;
             name = trim(name);
@@ -396,7 +403,7 @@ int main() {
             }
 
             else if (consoleManager.memorySizeCheck(memorySize)) {
-                cout << "Invalid memory allocation. Memory size exceeds maximum limit (65536 bytes). Please try again\n";
+                cout << "Invalid memory allocation. Memory size must be between 64 - 65536 bytes. Please try again.\n";
             }
             
             else {
@@ -410,7 +417,7 @@ int main() {
 
                 string subCommand;
                 while (getline(cin, subCommand)) {
-                    cout << "Enter command:> ";
+                 //   cout << "Enter command:> ";
                     if (subCommand == "exit") {
                         consoleManager.destroyScreen();
                         consoleManager.switchConsole("MAIN");
@@ -438,13 +445,63 @@ int main() {
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
                     }
+                    cout << "Enter command: ";
                 }
             }
         }
 
         // Added "screen -c"
         else if (inputCommand.rfind("screen -c ", 0) == 0) {
-           
+            std::string fullCmd = inputCommand.substr(10);  // Remove "screen -c "
+            size_t quoteStart = fullCmd.find('"');
+            size_t quoteEnd = fullCmd.rfind('"');
+
+            std::string temp = fullCmd.substr(0, quoteStart);  // part before the instruction string
+            std::string instructionString = fullCmd.substr(quoteStart + 1, quoteEnd - quoteStart - 1); // inside quotes
+
+            std::istringstream ss(temp);
+            std::string name;
+            size_t memorySize;
+            ss >> name >> memorySize;
+            name = trim(name);
+
+            /*cout << name << "\n";
+            cout << memorySize << "\n";
+            cout << instructionString << "\n";*/
+
+            // Split instructions
+            std::istringstream iss(instructionString);
+            string instr;
+            vector<string> instructionList;
+
+            while (std::getline(iss, instr, ';')) {
+                instr = trim(instr);
+                if (!instr.empty()) {
+                    instructionList.push_back(instr);
+                }
+            }
+
+            // Validity checkers
+            if (consoleManager.findScreenSessions(name)) {
+                cout << "Screen already exists. Please type another name.\n";
+            }
+            else if (consoleManager.memorySizeCheck(memorySize)) {
+                cout << "Invalid memory allocation. Memory size must be between 64 - 65536 bytes. Please try again.\n";
+            }
+            else if (consoleManager.instructionSizeCheck(instructionList.size())) {
+                cout << "Invalid command. Number of instructions must be limited to 1 - 50. Please try again.\n";
+            }
+            else {
+                /*cout << "Doing something\n";*/
+                static int processId = 0;
+                size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
+
+                auto process = make_shared<Process>(name, processId++, mem_per_proc);
+
+                consoleManager.addNewScreen(name, process, memorySize);
+                consoleManager.initializeScreen();
+            }
+
         }
 
 
@@ -555,7 +612,15 @@ int main() {
         }
 
         else if (inputCommand == "vmstat") { // NEW
-            std::cout << "Doing something.";
+            //std::cout << "Doing something.";
+            cout << "Total Memory: " << "K \n";
+            cout << "Used Memory: " << "K \n";
+            cout << "Free Memory: " << "K \n";
+            cout << "Idle CPU ticks: " << "K \n";
+            cout << "Active CPU ticks: " << "K \n";
+            cout << "Total CPU ticks: " << "K \n";
+            cout << "Num paged in: " << "K \n";
+            cout << "Num paged out: " << "K \n";
         }
 
         else if (inputCommand == "clear") {
