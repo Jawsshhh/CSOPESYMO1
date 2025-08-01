@@ -28,7 +28,7 @@ protected:
     std::thread schedulerThread;
     std::mutex queueMutex;
     std::condition_variable cv;
-    std::atomic<bool> running;
+    std::atomic<bool> running = true;
     std::vector<std::shared_ptr<Process>> runningProcesses;
     std::vector<std::shared_ptr<Process>> finishedProcesses;
     std::vector<bool> coreAvailable;

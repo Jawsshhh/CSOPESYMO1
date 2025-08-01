@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <mutex>
-
+#include <queue>
 struct PageTableEntry {
     bool valid = false;
     int frameIndex = -1;
@@ -26,11 +26,25 @@ public:
 
     void registerProcessPages(int pid, const std::vector<int>& pages);
     void generateSnapshot(const std::string& filename, int quantumCycle);
+    void initializePageData(int page, const std::string& data);
+
 
     size_t getUsedMemory() const;
     size_t getFreeMemory() const;
 
+    int getNextGlobalPageId();
+
+    size_t getFrameSize() const;
+
+
 private:
+
+    size_t frameSize;
+
+    int nextPageId;
+    std::queue<int> reusablePageIds;
+    const int maxVirtualPages;
+
     int findFreeFrame();
     int selectVictim();
     void evict(int frameIdx);
@@ -40,7 +54,6 @@ private:
     void loadFromBackingStore(int page);
     std::string readPageDataFromBackingStore(int page);
 
-    size_t frameSize;
     int totalFrames;
 
     std::vector<Frame> frameTable;

@@ -4,12 +4,18 @@
 #include <sstream>
 #include <ctime>
 #include <iomanip>
+#include <queue>
 
 DemandPagingAllocator::DemandPagingAllocator(size_t maxMemory, size_t frameSize)
-    : totalFrames(maxMemory / frameSize), frameSize(frameSize) {
+    : totalFrames(maxMemory / frameSize), frameSize(frameSize), nextPageId(0), maxVirtualPages(static_cast<int>((maxMemory / frameSize) * 2)) {
     frameTable.resize(totalFrames);
     std::ofstream clearLog("csopesy-backing-store.txt", std::ios::trunc);
     clearLog.close();
+
+    // Initialize reusable page IDs
+    for (int i = 0; i < totalFrames * 4; ++i) {
+        reusablePageIds.push(i);
+    }
 }
 
 bool DemandPagingAllocator::accessPage(int page) {
@@ -23,6 +29,11 @@ bool DemandPagingAllocator::accessPage(int page) {
 }
 
 bool DemandPagingAllocator::pageFault(int page) {
+    std::unique_lock<std::mutex> lock(memoryMutex, std::defer_lock);
+    if (!lock.try_lock()) {
+        return false; // Couldn't acquire lock
+    }
+
     int frameIdx = findFreeFrame();
     if (frameIdx == -1) frameIdx = selectVictim();
     if (frameIdx == -1) return false;
@@ -40,22 +51,41 @@ int DemandPagingAllocator::findFreeFrame() {
 }
 
 int DemandPagingAllocator::selectVictim() {
-    for (int i = 0; i < frameTable.size(); ++i)
-        if (frameTable[i].occupied) return i;
-    return -1;
+    int oldest = -1;
+    time_t oldestTime = std::numeric_limits<time_t>::max();
+
+    for (int i = 0; i < frameTable.size(); ++i) {
+        if (frameTable[i].occupied) {
+            int page = frameTable[i].page;
+            if (globalPageTable[page].lastUsed < oldestTime) {
+                oldest = i;
+                oldestTime = globalPageTable[page].lastUsed;
+            }
+        }
+    }
+
+    return oldest;
 }
 
 void DemandPagingAllocator::evict(int frameIdx) {
     auto& frame = frameTable[frameIdx];
     if (frame.occupied) {
-        auto& entry = globalPageTable[frame.page];
+        int page = frame.page;
+        auto& entry = globalPageTable[page];
+
         entry.valid = false;
         entry.frameIndex = -1;
-        entry.dirty = false;
-        writeToBackingStore(frame.page);
+
+        if (entry.dirty) {
+            writeToBackingStore(page);
+        }
+
+        // Optional: Recycle unused page IDs
+        // reusablePageIds.push(page);
+
+        frame.occupied = false;
+        frame.page = -1;
     }
-    frame.occupied = false;
-    frame.page = -1;
 }
 
 bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
@@ -64,7 +94,7 @@ bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
     entry.valid = true;
     entry.frameIndex = frameIdx;
     entry.lastUsed = time(nullptr);
-    entry.dirty = false;
+    entry.dirty = true;
 
     entry.data = readPageDataFromBackingStore(page);
     if (entry.data.empty()) {
@@ -151,6 +181,12 @@ void DemandPagingAllocator::generateSnapshot(const std::string& filename, int qu
     out.close();
 }
 
+void DemandPagingAllocator::initializePageData(int page, const std::string& data) {
+    std::lock_guard<std::mutex> lock(memoryMutex);
+    globalPageTable[page].data = data;
+    globalPageTable[page].dirty = true;
+}
+
 size_t DemandPagingAllocator::getUsedMemory() const {
     std::lock_guard<std::mutex> lock(memoryMutex);
     size_t used = 0;
@@ -167,4 +203,23 @@ size_t DemandPagingAllocator::getFreeMemory() const {
         if (!frame.occupied) free++;
     }
     return free * frameSize;
+}
+size_t DemandPagingAllocator::getFrameSize() const {
+    return frameSize;
+}
+
+int DemandPagingAllocator::getNextGlobalPageId() {
+    std::lock_guard<std::mutex> lock(memoryMutex);
+
+    if (!reusablePageIds.empty()) {
+        int id = reusablePageIds.front();
+        reusablePageIds.pop();
+        return id;
+    }
+
+    if (nextPageId >= maxVirtualPages) {
+        throw std::runtime_error("");
+    }
+
+    return nextPageId++;
 }

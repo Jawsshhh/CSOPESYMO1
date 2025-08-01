@@ -14,6 +14,7 @@ RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
+
     }
     schedulerThread = std::thread(&RRScheduler::schedulerLoop, this);
 }
@@ -29,15 +30,26 @@ void RRScheduler::addProcess(std::shared_ptr<Process> process) {
     int pagesNeeded = static_cast<int>((memoryNeeded + frameSize - 1) / frameSize);
 
     std::vector<int> assignedPages;
-    for (int i = 0; i < pagesNeeded; ++i) {
-        assignedPages.push_back(globalPageCounter++);
-    }
 
-    process->assignPages(assignedPages);
-    memoryManager.registerProcessPages(process->getId(), assignedPages); 
-    readyQueue.push(process);
-    cv.notify_one();
+    try {
+        for (int i = 0; i < pagesNeeded; ++i) {
+            int pageId = memoryManager.getNextGlobalPageId();
+            assignedPages.push_back(pageId);
+            memoryManager.initializePageData(pageId, "Init data for page " + std::to_string(pageId));
+        }
+
+        memoryManager.registerProcessPages(process->getId(), assignedPages);
+        process->assignPages(assignedPages);
+        readyQueue.push(process);
+        cv.notify_one();
+
+    }
+    catch (const std::runtime_error& e) {
+      //  std::cerr << "[RRScheduler::addProcess] " << e.what() << "\n";
+    }
 }
+
+
 
 
 
@@ -56,59 +68,56 @@ void RRScheduler::schedulerLoop() {
 }
 
 void RRScheduler::workerLoop(int coreId) {
-    constexpr int estimatedInstructionSize = 4;
-
     while (running) {
         std::shared_ptr<Process> process = nullptr;
 
+        // === Wait for your core's turn BEFORE grabbing the queue ===
+        {
+            std::unique_lock<std::mutex> turnLock(coreTurnMutex);
+            while (coreId != nextCoreId && running) {
+                cv.wait(turnLock);
+            }
+            if (!running) break;
+        }
+
+        // === Now grab a process safely ===
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
-            if (!running) break;
-
-            {
-                std::unique_lock<std::mutex> turnLock(coreTurnMutex);
-                if (coreId != nextCoreId) {
-                    continue;
-                }
+            if (readyQueue.empty()) {
+                continue;  // nothing to do — loop and wait again
             }
 
-            auto candidate = readyQueue.front();
+            process = readyQueue.front();
             readyQueue.pop();
 
-            process = candidate;
             process->setAssignedCore(coreId);
             coreAvailable[coreId] = false;
             processHandler.insertProcess(process);
-
-            {
-                std::unique_lock<std::mutex> turnLock(coreTurnMutex);
-                nextCoreId = (nextCoreId + 1) % numCores;
-            }
         }
 
         if (process) {
             unsigned cyclesUsed = 0;
-            const auto& pages = process->getAssignedPages();
+            const auto& assignedPages = process->getAssignedPages();
 
             while (cyclesUsed < quantum && !process->isFinished() && running) {
                 int instructionIndex = process->getCurrentInstructionIndex();
-                int pageChunkSize = std::max(1, static_cast<int>(frameSize / estimatedInstructionSize));
-                int pageLocal = instructionIndex / pageChunkSize;
+                int pageLocal = instructionIndex / static_cast<int>(frameSize);
 
-                if (pageLocal >= pages.size()) break;
+                if (pageLocal >= assignedPages.size()) {
+                   
+                    break;
+                }
 
-                int globalPage = pages[pageLocal];
+                int globalPage = assignedPages[pageLocal];
 
                 if (!memoryManager.accessPage(globalPage)) {
                     if (!memoryManager.pageFault(globalPage)) {
-                        std::cerr << "[PAGE FAULT] Could not resolve page fault for page " << globalPage << "\n";
                         break;
                     }
                 }
 
                 process->executeNextInstruction();
-                cyclesUsed++;
+                ++cyclesUsed;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
 
@@ -125,12 +134,18 @@ void RRScheduler::workerLoop(int coreId) {
                 coreAvailable[coreId] = true;
             }
 
+            // === Rotate turn ===
+            {
+                std::lock_guard<std::mutex> turnLock(coreTurnMutex);
+                nextCoreId = (nextCoreId + 1) % coreAvailable.size();
+            }
+
             cv.notify_all();
 
             if (coreId == 0 && cyclesUsed > 0) {
                 std::lock_guard<std::mutex> snapLock(snapshotMutex);
                 std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
-                memoryManager.generateSnapshot(filename, quantumCycle);
+               // memoryManager.generateSnapshot(filename, quantumCycle);
             }
         }
 
