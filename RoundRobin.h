@@ -26,6 +26,7 @@ private:
     std::mutex coreTurnMutex;
     std::atomic<int> quantumCycle = 0;
     std::mutex snapshotMutex;
+    int globalPageCounter = 0;
 
 
 };

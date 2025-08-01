@@ -25,7 +25,7 @@ Process::~Process() {
         logFile.close();
     }
 }
-size_t Process::getMemoryNeeded() {
+size_t Process::getMemoryNeeded() const {
     return memoryRequired;
 }
 
@@ -187,6 +187,32 @@ std::shared_ptr<SleepInstruction> Process::getCurrentSleepInstruction()
 {
     return currentSleepInstruction;
 }
+
+void Process::assignPages(const std::vector<int>& pages) {
+    assignedPages = pages;
+
+    // Log number of pages assigned
+    std::lock_guard<std::mutex> lock(fileMutex);
+    if (logFile.is_open()) {
+        logFile << "[PAGE ASSIGNMENT] Assigned " << pages.size() << " pages to process (Page IDs: ";
+        for (size_t i = 0; i < pages.size(); ++i) {
+            logFile << pages[i];
+            if (i != pages.size() - 1) logFile << ", ";
+        }
+        logFile << ")\n";
+        logFile.flush();
+    }
+}
+
+
+const std::vector<int>& Process::getAssignedPages() const {
+    return assignedPages;
+}
+
+std::chrono::system_clock::time_point Process::getStartTime() const {
+    return std::chrono::system_clock::now(); // or your stored creation timepoint
+}
+
 
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {

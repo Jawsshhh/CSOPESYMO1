@@ -1,13 +1,8 @@
 #pragma once
-
-#include <unordered_map>
 #include <vector>
-#include <fstream>
-#include <ctime>
-#include <mutex>
+#include <unordered_map>
 #include <string>
-#include <sstream>
-#include <iomanip>
+#include <mutex>
 
 struct PageTableEntry {
     bool valid = false;
@@ -17,8 +12,7 @@ struct PageTableEntry {
     std::string data;
 };
 
-struct FrameInfo {
-    int pid = -1;
+struct Frame {
     int page = -1;
     bool occupied = false;
 };
@@ -27,34 +21,31 @@ class DemandPagingAllocator {
 public:
     DemandPagingAllocator(size_t maxMemory, size_t frameSize);
 
-    bool accessPage(int pid, int page);
-    void pageFault(int pid, int page);
-    std::string readPageDataFromBackingStore(int pid, int page);
+    bool accessPage(int page);
+    bool pageFault(int page);
+
+    void registerProcessPages(int pid, const std::vector<int>& pages);
     void generateSnapshot(const std::string& filename, int quantumCycle);
-
-    void writeToBackingStore(int pid, int page);
-    void loadFromBackingStore(int pid, int page);
-
 
     size_t getUsedMemory() const;
     size_t getFreeMemory() const;
-
-
-
-    std::unordered_map<int, std::vector<PageTableEntry>>& getPageTables();
 
 private:
     int findFreeFrame();
     int selectVictim();
     void evict(int frameIdx);
-    void loadPage(int pid, int page, int frameIdx);
+    bool loadPage(int page, int frameIdx);
 
-    mutable std::mutex memoryMutex;
+    void writeToBackingStore(int page);
+    void loadFromBackingStore(int page);
+    std::string readPageDataFromBackingStore(int page);
 
-    size_t totalFrames;
     size_t frameSize;
-    std::vector<FrameInfo> frameTable;
-    std::unordered_map<int, std::vector<PageTableEntry>> pageTables;
+    int totalFrames;
 
+    std::vector<Frame> frameTable;
+    std::unordered_map<int, PageTableEntry> globalPageTable;
+
+    std::unordered_map<int, std::vector<int>> processPageMap;
+    mutable std::mutex memoryMutex;
 };
-#pragma once
