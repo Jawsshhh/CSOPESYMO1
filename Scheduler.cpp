@@ -123,3 +123,55 @@ void Scheduler::generateReport(const std::string& filename) {
     outputFile.close();
     std::cout << "Report generated to " << filename << "!\n";
 }
+
+
+void Scheduler::displayProcessSmi() {
+    std::lock_guard<std::mutex> lock(queueMutex);
+
+    //auto runningProcs = processHandler.getCurrentlyActiveProcessesPerCore(numCores);
+    auto runningProcs = processHandler.getRunningProcesses();
+
+    // CPU Util
+    std::unordered_set<int> usedCores;
+    for (const auto& p : runningProcs) {
+        usedCores.insert(p->getAssignedCore());
+    }
+    int coresUsed = static_cast<int>(usedCores.size());
+    int cpuUtilization = static_cast<int>((static_cast<float>(coresUsed) / numCores) * 100);
+
+
+    // Memory Util
+    int usedMem = memoryManager.getUsedMemory();
+    int totalMem = memoryManager.getUsedMemory() + memoryManager.getFreeMemory();       
+    int memUtilPercent = static_cast<int>((static_cast<float>(usedMem) / totalMem) * 100);
+
+    // ==== Print ====
+    std::cout << "\n========= Process-smi ==========\n";
+    std::cout << "CPU Util: " << cpuUtilization << "%\n";
+    std::cout << "Memory Usage: " << usedMem << " MiB / " << static_cast<int>(totalMem) << " MiB\n";
+    std::cout << "Memory Util: " << memUtilPercent << "%\n";
+    std::cout << "============================================\n";
+    std::cout << "Running processes and memory usage:\n";
+    std::cout << "--------------------------------------------\n";
+    for (const auto& process : runningProcs) {
+        if (process) {
+            std::cout << process->getName() << "  " << process->getMemoryNeeded() << " MiB\n";
+        }
+    }
+}
+
+void Scheduler::displayVMStat() {
+
+    size_t totalMemory = memoryManager.getUsedMemory() + memoryManager.getFreeMemory();
+
+    std::cout << "\n====================== vmstat =======================\n";
+    std::cout << "Total Memory: " << totalMemory << " B \n";
+    std::cout << "Used Memory: " << memoryManager.getUsedMemory() << " B \n";
+    std::cout << "Free Memory: " << memoryManager.getFreeMemory() << " B \n";
+    std::cout << "Idle CPU ticks: " << " \n";
+    std::cout << "Active CPU ticks: " << " \n";
+    std::cout << "Total CPU ticks: " << " \n";
+    std::cout << "Num paged in: " << " \n";
+    std::cout << "Num paged out: " << " \n";
+    std::cout << "==================================================\n";
+}

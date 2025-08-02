@@ -465,10 +465,6 @@ int main() {
             ss >> name >> memorySize;
             name = trim(name);
 
-            /*cout << name << "\n";
-            cout << memorySize << "\n";
-            cout << instructionString << "\n";*/
-
             // Split instructions
             std::istringstream iss(instructionString);
             string instr;
@@ -608,19 +604,17 @@ int main() {
         }
 
         else if (inputCommand == "process-smi") { // NEW
-            std::cout << "Doing something.";
+            // std::cout << "Doing something.";
+            if (scheduler) {
+                scheduler->displayProcessSmi();
+            }
         }
 
         else if (inputCommand == "vmstat") { // NEW
             //std::cout << "Doing something.";
-            cout << "Total Memory: " << "K \n";
-            cout << "Used Memory: " << "K \n";
-            cout << "Free Memory: " << "K \n";
-            cout << "Idle CPU ticks: " << "K \n";
-            cout << "Active CPU ticks: " << "K \n";
-            cout << "Total CPU ticks: " << "K \n";
-            cout << "Num paged in: " << "K \n";
-            cout << "Num paged out: " << "K \n";
+            if (scheduler) {
+                scheduler->displayVMStat();
+            }
         }
 
         else if (inputCommand == "clear") {

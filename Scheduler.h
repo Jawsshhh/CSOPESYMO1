@@ -22,6 +22,9 @@ public:
     virtual void listProcesses();
     virtual void generateReport(const std::string& filename);
 
+    virtual void displayProcessSmi();
+    virtual void displayVMStat();
+
 protected:
     int numCores;
     std::vector<std::thread> workerThreads;
