@@ -128,7 +128,6 @@ void Scheduler::generateReport(const std::string& filename) {
 void Scheduler::displayProcessSmi() {
     std::lock_guard<std::mutex> lock(queueMutex);
 
-    //auto runningProcs = processHandler.getCurrentlyActiveProcessesPerCore(numCores);
     auto runningProcs = processHandler.getRunningProcesses();
 
     // CPU Util
@@ -158,13 +157,14 @@ void Scheduler::displayProcessSmi() {
             std::cout << process->getName() << "  " << process->getMemoryNeeded() << " MiB\n";
         }
     }
+    std::cout << "============================================\n";
 }
 
 void Scheduler::displayVMStat() {
 
     size_t totalMemory = memoryManager.getUsedMemory() + memoryManager.getFreeMemory();
 
-    std::cout << "\n====================== vmstat =======================\n";
+    std::cout << "\n============ vmstat ============\n";
     std::cout << "Total Memory: " << totalMemory << " B \n";
     std::cout << "Used Memory: " << memoryManager.getUsedMemory() << " B \n";
     std::cout << "Free Memory: " << memoryManager.getFreeMemory() << " B \n";
@@ -173,5 +173,5 @@ void Scheduler::displayVMStat() {
     std::cout << "Total CPU ticks: " << " \n";
     std::cout << "Num paged in: " << " \n";
     std::cout << "Num paged out: " << " \n";
-    std::cout << "==================================================\n";
+    std::cout << "==================================\n";
 }

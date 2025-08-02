@@ -394,7 +394,7 @@ int main() {
             // string name = inputCommand.substr(10);
             std::istringstream iss(inputCommand.substr(10));
             string name;
-            size_t memorySize;    // Do we set default value if no memSize was inputted?
+            int memorySize;    
 
             iss >> name >> memorySize;
             name = trim(name);
@@ -408,9 +408,17 @@ int main() {
             
             else {
                 static int processId = 0;
-                size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
+                //size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
-                auto process = make_shared<Process>(name, processId++, mem_per_proc);   
+                auto process = make_shared<Process>(name, processId++, memorySize);   
+
+                // Adds process to scheduler
+               /* try {
+                    scheduler->addProcess(process);
+                }
+                catch (const exception&) {
+
+                }*/
 
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
@@ -461,7 +469,7 @@ int main() {
 
             std::istringstream ss(temp);
             std::string name;
-            size_t memorySize;
+            int memorySize;
             ss >> name >> memorySize;
             name = trim(name);
 
@@ -494,8 +502,101 @@ int main() {
 
                 auto process = make_shared<Process>(name, processId++, mem_per_proc);
 
+                // Parse Instructions
+                for (const auto& instrLine : instructionList) {
+                    std::istringstream tokens(instrLine);
+                    std::string type;
+                    tokens >> type;
+
+                    if (type == "PRINT") {
+                        std::string message;
+                        std::getline(tokens, message);  // take remaining part as message
+                        message = trim(message);
+
+                       // cout << message;
+
+                        auto printInstr = make_shared<PrintInstruction>(process.get(), message);
+                        process->addInstruction(printInstr);
+                    }
+                    else if (type == "DECLARE") {
+                        std::string var;
+                        uint16_t val;
+                        tokens >> var >> val;
+
+                        /*cout << var << "\n";
+                        cout << val << "\n";*/
+                        //process->addInstruction(make_shared<DeclareInstruction>(process.get(), var, val));
+
+                        auto declareInstr = make_shared<DeclareInstruction>(process.get(), var, val);
+                        process->addInstruction(declareInstr);
+                    }
+                    else if (type == "ADD") {
+                        std::string dest, src1, src2;
+                        tokens >> dest >> src1 >> src2;
+                       
+                        auto addInstr = make_shared<AddInstruction>(process.get(), dest, src1, src2);
+                        process->addInstruction(addInstr);
+                    }
+                    else if (type == "SUBTRACT") {
+                        std::string dest, src1, src2;
+                        tokens >> dest >> src1 >> src2;
+
+                        auto subInstr = make_shared<SubtractInstruction>(process.get(), dest, src1, src2);
+                        process->addInstruction(subInstr);
+                    }
+                    /*else if (type == "SLEEP") {
+                        
+                    }
+                    else if (type == "FOR") {
+                        
+                    }
+                    else if (type == "READ") {
+                        
+                    }
+                    else if (type == "WRITE") {
+                        
+                    }*/
+                    else {
+                        std::cout << "Unknown instruction type: " << type << "\n";
+                    }
+                }
+
+
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
+
+                // subCommands etc etc
+                string subCommand;
+                while (getline(cin, subCommand)) {
+                    if (subCommand == "exit") {
+                        consoleManager.destroyScreen();
+                        consoleManager.switchConsole("MAIN");
+                        consoleManager.initializeScreen();
+                        break;
+                    }
+                    else if (subCommand == "process-smi") {
+                        cout << "Process name: " << process->getName() << "\n";
+                        cout << "ID: " << process->getId() << "\n";
+                        cout << "Messages:\n";  // Changed from "Logs:"
+
+                        auto logs = process->getLogs();
+                        for (const auto& log : logs) {
+                            cout << log << "\n";  // All logs are PRINT messages now
+                        }
+
+                        if (process->isFinished()) {
+                            cout << "Finished!\n";
+                        }
+                        else {
+                            cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
+                                << "/" << process->getInstructionCount() << "\n";
+                        }
+                    }
+                    else {
+                        cout << "Unknown screen command. Type 'exit' to return.\n";
+                    }
+                    cout << "Enter command: ";
+                }
             }
 
         }
