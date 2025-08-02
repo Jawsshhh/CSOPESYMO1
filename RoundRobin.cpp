@@ -1,8 +1,8 @@
 #include "RoundRobin.h"
 #include <chrono>
 #include <iostream>
-#include <cmath>         // For page calculation
-#include <algorithm>     // For std::max
+#include <cmath>
+#include <algorithm>
 
 RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     size_t maxMemory, size_t frameSize)
@@ -14,7 +14,6 @@ RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
-
     }
     schedulerThread = std::thread(&RRScheduler::schedulerLoop, this);
 }
@@ -41,29 +40,22 @@ void RRScheduler::addProcess(std::shared_ptr<Process> process) {
         memoryManager.registerProcessPages(process->getId(), assignedPages);
         process->assignPages(assignedPages);
         readyQueue.push(process);
-        cv.notify_one();
+        cv.notify_all();
 
     }
     catch (const std::runtime_error& e) {
-      //  std::cerr << "[RRScheduler::addProcess] " << e.what() << "\n";
+        // std::cerr << "[RRScheduler::addProcess] " << e.what() << "\n";
     }
 }
-
-
-
-
-
 
 void RRScheduler::schedulerLoop() {
     while (running) {
         std::unique_lock<std::mutex> lock(queueMutex);
-        cv.wait(lock, [this]() { return !readyQueue.empty() || !running; });
-        if (!running) break;
-
-        cv.notify_all(); // Wake up all workers
+        if (!readyQueue.empty()) {
+            cv.notify_all();
+        }
         lock.unlock();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -71,20 +63,17 @@ void RRScheduler::workerLoop(int coreId) {
     while (running) {
         std::shared_ptr<Process> process = nullptr;
 
-        // === Wait for your core's turn BEFORE grabbing the queue ===
         {
             std::unique_lock<std::mutex> turnLock(coreTurnMutex);
-            while (coreId != nextCoreId && running) {
-                cv.wait(turnLock);
-            }
+            cv.wait(turnLock, [&]() { return coreId == nextCoreId || !running; });
             if (!running) break;
         }
 
-        // === Now grab a process safely ===
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             if (readyQueue.empty()) {
-                continue;  // nothing to do — loop and wait again
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
             }
 
             process = readyQueue.front();
@@ -96,57 +85,78 @@ void RRScheduler::workerLoop(int coreId) {
         }
 
         if (process) {
-            unsigned cyclesUsed = 0;
             const auto& assignedPages = process->getAssignedPages();
 
-            while (cyclesUsed < quantum && !process->isFinished() && running) {
+            if (process->isSleeping()) {
+                process->setSleeping(true, process->getRemainingSleepTicks() - 1);
+                std::lock_guard<std::mutex> lock(queueMutex);
+                readyQueue.push(process);
+            }
+            else {
                 int instructionIndex = process->getCurrentInstructionIndex();
                 int pageLocal = instructionIndex / static_cast<int>(frameSize);
 
-                if (pageLocal >= assignedPages.size()) {
-                   
-                    break;
-                }
+                if (pageLocal < assignedPages.size()) {
+                    int globalPage = assignedPages[pageLocal];
 
-                int globalPage = assignedPages[pageLocal];
+                    int retries = 3;
+                    while (!memoryManager.accessPage(globalPage) && retries-- > 0) {
+                        memoryManager.pageFault(globalPage);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    }
 
-                if (!memoryManager.accessPage(globalPage)) {
-                    if (!memoryManager.pageFault(globalPage)) {
-                        break;
+                    if (!memoryManager.accessPage(globalPage)) {
+                        std::lock_guard<std::mutex> lock(queueMutex);
+                        readyQueue.push(process);
+                    }
+                    else if (process->getCurrentInstructionIndex() < process->getInstructionCount()) {
+                        process->executeNextInstruction();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
+                        std::lock_guard<std::mutex> lock(queueMutex);
+                        if (process->isFinished()) {
+                            processHandler.markProcessFinished(process->getId());
+                        }
+                        else {
+                            readyQueue.push(process);
+                        }
+					}
+                    else if (process->getCurrentInstructionIndex() >= process->getInstructionCount()) {
+                        process->setFinished(true);
+                        processHandler.markProcessFinished(process->getId());
+					}
+
+                    else if (!process->isFinished()) {
+                        process->executeNextInstruction();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
+
+                        std::lock_guard<std::mutex> lock(queueMutex);
+                        if (process->isFinished()) {
+                            processHandler.markProcessFinished(process->getId());
+                        }
+                        else {
+                            readyQueue.push(process);
+                        }
                     }
                 }
-
-                process->executeNextInstruction();
-                ++cyclesUsed;
-                std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(queueMutex);
-
-                if (process->isFinished()) {
-                    processHandler.markProcessFinished(process->getId());
-                }
                 else {
+                    std::lock_guard<std::mutex> lock(queueMutex);
                     readyQueue.push(process);
                 }
-
-                coreAvailable[coreId] = true;
             }
 
-            // === Rotate turn ===
-            {
-                std::lock_guard<std::mutex> turnLock(coreTurnMutex);
-                nextCoreId = (nextCoreId + 1) % coreAvailable.size();
-            }
+            coreAvailable[coreId] = true;
+        }
 
+        {
+            std::lock_guard<std::mutex> turnLock(coreTurnMutex);
+            nextCoreId = (nextCoreId + 1) % coreAvailable.size();
             cv.notify_all();
+        }
 
-            if (coreId == 0 && cyclesUsed > 0) {
-                std::lock_guard<std::mutex> snapLock(snapshotMutex);
-                std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
-               // memoryManager.generateSnapshot(filename, quantumCycle);
-            }
+        if (coreId == 0 && process && process->getInstructionCount() > 0) {
+            std::lock_guard<std::mutex> snapLock(snapshotMutex);
+            std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
+            // memoryManager.generateSnapshot(filename, quantumCycle);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

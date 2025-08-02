@@ -29,10 +29,7 @@ bool DemandPagingAllocator::accessPage(int page) {
 }
 
 bool DemandPagingAllocator::pageFault(int page) {
-    std::unique_lock<std::mutex> lock(memoryMutex, std::defer_lock);
-    if (!lock.try_lock()) {
-        return false; // Couldn't acquire lock
-    }
+    std::unique_lock<std::mutex> lock(memoryMutex); // block until acquired
 
     int frameIdx = findFreeFrame();
     if (frameIdx == -1) frameIdx = selectVictim();
