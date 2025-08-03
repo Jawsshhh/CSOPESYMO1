@@ -5,15 +5,28 @@
 #include <ctime>
 #include <iomanip>
 #include <queue>
+#include <algorithm>
+#include <limits>
 
-DemandPagingAllocator::DemandPagingAllocator(size_t maxMemory, size_t frameSize)
-    : totalFrames(maxMemory / frameSize), frameSize(frameSize), nextPageId(0), maxVirtualPages(static_cast<int>((maxMemory / frameSize) * 2)) {
+DemandPagingAllocator::DemandPagingAllocator(size_t maxMemory, size_t frameSize,
+    const std::string& backingStore)
+    : totalFrames(maxMemory / frameSize),
+    frameSize(frameSize),
+    nextPageId(0),
+    maxVirtualPages(static_cast<int>((maxMemory / frameSize) * 2)),
+    backingStoreFile(backingStore) {
+
     frameTable.resize(totalFrames);
-    std::ofstream clearLog("csopesy-backing-store.txt", std::ios::trunc);
+
+    // Clear both log files at startup
+    std::ofstream clearBackingStore(backingStoreFile, std::ios::trunc);
+    clearBackingStore.close();
+
+    std::ofstream clearLog("paging-log.txt", std::ios::trunc);
     clearLog.close();
 
     // Initialize reusable page IDs
-    for (int i = 0; i < totalFrames * 4; ++i) {
+    for (int i = 0; i < maxVirtualPages; ++i) {
         reusablePageIds.push(i);
     }
 }
@@ -23,27 +36,42 @@ bool DemandPagingAllocator::accessPage(int page) {
     auto it = globalPageTable.find(page);
     if (it != globalPageTable.end() && it->second.valid) {
         it->second.lastUsed = time(nullptr);
+        logPageOperation(page, "ACCESS");
         return true;
     }
+    logPageOperation(page, "ACCESS_MISS");
     return false;
 }
 
 bool DemandPagingAllocator::pageFault(int page) {
-    std::unique_lock<std::mutex> lock(memoryMutex); // block until acquired
+    std::unique_lock<std::mutex> lock(memoryMutex);
 
+    // Find a frame to use
     int frameIdx = findFreeFrame();
-    if (frameIdx == -1) frameIdx = selectVictim();
-    if (frameIdx == -1) return false;
+    if (frameIdx == -1) {
+        frameIdx = selectVictim();
+    }
+    if (frameIdx == -1) {
+        logPageOperation(page, "FAULT_FAILED", false);
+        return false;
+    }
 
+    // Evict current page if frame is occupied
     evict(frameIdx);
+
+    // Load the requested page
     bool success = loadPage(page, frameIdx);
-    loadFromBackingStore(page);
+
+    // Log the page fault operation
+    logPageOperation(page, success ? "FAULT_SUCCESS" : "FAULT_FAILED", success);
+
     return success;
 }
 
 int DemandPagingAllocator::findFreeFrame() {
-    for (int i = 0; i < frameTable.size(); ++i)
+    for (int i = 0; i < frameTable.size(); ++i) {
         if (!frameTable[i].occupied) return i;
+    }
     return -1;
 }
 
@@ -66,92 +94,200 @@ int DemandPagingAllocator::selectVictim() {
 
 void DemandPagingAllocator::evict(int frameIdx) {
     auto& frame = frameTable[frameIdx];
-    if (frame.occupied) {
-        int page = frame.page;
-        auto& entry = globalPageTable[page];
-
-        entry.valid = false;
-        entry.frameIndex = -1;
-
-        if (entry.dirty) {
-            writeToBackingStore(page);
-        }
-
-        // Optional: Recycle unused page IDs
-        // reusablePageIds.push(page);
-
-        frame.occupied = false;
-        frame.page = -1;
+    if (!frame.occupied) {
+        return; // Nothing to evict
     }
+
+    int page = frame.page;
+    auto& entry = globalPageTable[page];
+
+    // Mark page as invalid in memory
+    entry.valid = false;
+    entry.frameIndex = -1;
+
+    // Write to backing store if page is dirty
+    if (entry.dirty) {
+        bool writeSuccess = writePageToBackingStore(page, entry.data);
+        logPageOperation(page, writeSuccess ? "EVICT_WRITE" : "EVICT_WRITE_FAILED", writeSuccess);
+
+        if (writeSuccess) {
+            entry.dirty = false; // Mark as clean after successful write
+        }
+    }
+    else {
+        logPageOperation(page, "EVICT_CLEAN");
+    }
+
+    // Clear the frame
+    frame.occupied = false;
+    frame.page = -1;
 }
 
 bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
     auto& entry = globalPageTable[page];
 
+    // Try to read from backing store first
+    std::string pageData = readPageFromBackingStore(page);
+
+    if (pageData.empty()) {
+        // Page not in backing store, create default data
+        pageData = "DefaultData_PAGE" + std::to_string(page);
+        logPageOperation(page, "LOAD_NEW");
+    }
+    else {
+        logPageOperation(page, "LOAD_FROM_STORE");
+    }
+
+    // Update page table entry
     entry.valid = true;
     entry.frameIndex = frameIdx;
     entry.lastUsed = time(nullptr);
-    entry.dirty = true;
+    entry.dirty = false;  // Just loaded, so not dirty yet
+    entry.data = pageData;
 
-    entry.data = readPageDataFromBackingStore(page);
-    if (entry.data.empty()) {
-        entry.data = "DefaultData_PAGE" + std::to_string(page);
-    }
-
+    // Update frame table
     frameTable[frameIdx] = { page, true };
+
     return true;
 }
 
-void DemandPagingAllocator::writeToBackingStore(int page) {
-    const auto& entry = globalPageTable[page];
-    std::ofstream store("csopesy-backing-store.txt", std::ios::app);
-    if (store.is_open()) {
-        store << "[PAGE:" << page << "]\n";
-        store << entry.data << "\n\n";
-        store.close();
+bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string& data) {
+    std::lock_guard<std::mutex> lock(backingStoreMutex);
+
+    try {
+        // Read existing content
+        std::ifstream inFile(backingStoreFile);
+        std::vector<std::string> lines;
+        std::string line;
+        bool pageFound = false;
+
+        // Read all lines and check if page already exists
+        while (std::getline(inFile, line)) {
+            lines.push_back(line);
+        }
+        inFile.close();
+
+        // Look for existing page entry
+        std::string pageHeader = "[PAGE:" + std::to_string(page) + "]";
+        auto it = std::find(lines.begin(), lines.end(), pageHeader);
+
+        if (it != lines.end()) {
+            // Page exists, replace its data
+            size_t headerPos = std::distance(lines.begin(), it);
+            size_t dataPos = headerPos + 1;
+
+            // Replace or insert data line
+            if (dataPos < lines.size()) {
+                lines[dataPos] = data;
+            }
+            else {
+                lines.insert(lines.begin() + dataPos, data);
+            }
+            pageFound = true;
+        }
+
+        // Write back to file
+        std::ofstream outFile(backingStoreFile, std::ios::trunc);
+        if (!outFile.is_open()) {
+            return false;
+        }
+
+        // Write existing content
+        for (const auto& existingLine : lines) {
+            outFile << existingLine << "\n";
+        }
+
+        // If page wasn't found, append new entry
+        if (!pageFound) {
+            outFile << pageHeader << "\n";
+            outFile << data << "\n";
+            outFile << "\n"; // Empty line separator
+        }
+
+        outFile.close();
+        return true;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error writing to backing store: " << e.what() << std::endl;
+        return false;
     }
 }
 
-void DemandPagingAllocator::loadFromBackingStore(int page) {
-    std::ifstream store("csopesy-backing-store.txt");
-    std::string line;
-    bool found = false;
+std::string DemandPagingAllocator::readPageFromBackingStore(int page) {
+    std::lock_guard<std::mutex> lock(backingStoreMutex);
 
-    while (std::getline(store, line)) {
-        if (line == "[PAGE:" + std::to_string(page) + "]") {
-            found = true;
-            break;
+    try {
+        std::ifstream file(backingStoreFile);
+        if (!file.is_open()) {
+            return "";
+        }
+
+        std::string line;
+        std::string pageHeader = "[PAGE:" + std::to_string(page) + "]";
+
+        while (std::getline(file, line)) {
+            if (line == pageHeader) {
+                // Found the page header, read the data line
+                if (std::getline(file, line)) {
+                    file.close();
+                    return line;
+                }
+                break;
+            }
+        }
+
+        file.close();
+        return ""; // Page not found
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error reading from backing store: " << e.what() << std::endl;
+        return "";
+    }
+}
+
+bool DemandPagingAllocator::pageExistsInBackingStore(int page) {
+    std::lock_guard<std::mutex> lock(backingStoreMutex);
+
+    std::ifstream file(backingStoreFile);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    std::string line;
+    std::string pageHeader = "[PAGE:" + std::to_string(page) + "]";
+
+    while (std::getline(file, line)) {
+        if (line == pageHeader) {
+            file.close();
+            return true;
         }
     }
-    store.close();
 
-    std::ofstream out("paging-log.txt", std::ios::app);
+    file.close();
+    return false;
+}
+
+void DemandPagingAllocator::logPageOperation(int page, const std::string& operation, bool success) {
+    std::ofstream logFile("paging-log.txt", std::ios::app);
+    if (!logFile.is_open()) {
+        return;
+    }
+
     time_t now = time(nullptr);
     tm localTime;
     localtime_s(&localTime, &now);
-    out << "[LOAD]  PAGE:" << page << " @ "
-        << std::put_time(&localTime, "%H:%M:%S") << (found ? "" : " [MISS]") << "\n";
-    out.close();
-}
 
-std::string DemandPagingAllocator::readPageDataFromBackingStore(int page) {
-    std::ifstream file("csopesy-backing-store.txt");
-    if (!file.is_open()) return "";
+    logFile << "[" << operation << "] PAGE:" << page << " @ "
+        << std::put_time(&localTime, "%H:%M:%S");
 
-    std::string line, content;
-    bool found = false;
-
-    while (std::getline(file, line)) {
-        if (line == "[PAGE:" + std::to_string(page) + "]") {
-            found = true;
-            while (std::getline(file, line) && !line.empty()) {
-                content += line + "\n";
-            }
-            break;
-        }
+    if (!success) {
+        logFile << " [FAILED]";
     }
 
-    return found ? content : "";
+    logFile << "\n";
+    logFile.close();
 }
 
 void DemandPagingAllocator::registerProcessPages(int pid, const std::vector<int>& pages) {
@@ -163,6 +299,7 @@ void DemandPagingAllocator::registerProcessPages(int pid, const std::vector<int>
 }
 
 void DemandPagingAllocator::generateSnapshot(const std::string& filename, int quantumCycle) {
+    std::lock_guard<std::mutex> lock(memoryMutex);
     std::ofstream out(filename);
     out << "[Snapshot @ Cycle " << quantumCycle << "]\n";
     for (int i = 0; i < frameTable.size(); ++i) {
@@ -180,9 +317,16 @@ void DemandPagingAllocator::generateSnapshot(const std::string& filename, int qu
 
 void DemandPagingAllocator::initializePageData(int page, const std::string& data) {
     std::lock_guard<std::mutex> lock(memoryMutex);
-    globalPageTable[page].data = data;
-    globalPageTable[page].dirty = true;
+    auto& entry = globalPageTable[page];
+    entry.data = data;
+    entry.dirty = true;
+
+    // DON'T write to backing store immediately during initialization
+    // Only write when the page is actually evicted
+    logPageOperation(page, "INIT_MEMORY_ONLY");
 }
+
+
 
 size_t DemandPagingAllocator::getUsedMemory() const {
     std::lock_guard<std::mutex> lock(memoryMutex);
@@ -201,6 +345,7 @@ size_t DemandPagingAllocator::getFreeMemory() const {
     }
     return free * frameSize;
 }
+
 size_t DemandPagingAllocator::getFrameSize() const {
     return frameSize;
 }
@@ -215,8 +360,55 @@ int DemandPagingAllocator::getNextGlobalPageId() {
     }
 
     if (nextPageId >= maxVirtualPages) {
-        throw std::runtime_error("");
+        throw std::runtime_error("Maximum virtual pages exceeded");
     }
 
     return nextPageId++;
+}
+
+void DemandPagingAllocator::releaseProcessPages(int pid) {
+    std::lock_guard<std::mutex> lock(memoryMutex);
+
+    auto it = processPageMap.find(pid);
+    if (it == processPageMap.end()) {
+        return; // Process not found
+    }
+
+    // Release each page assigned to this process
+    for (int pageId : it->second) {
+        releasePage(pageId);
+    }
+
+    // Remove process from map
+    processPageMap.erase(it);
+
+    logPageOperation(-1, "PROCESS_" + std::to_string(pid) + "_RELEASED");
+}
+
+void DemandPagingAllocator::releasePage(int pageId) {
+    // Remove from global page table
+    auto pageIt = globalPageTable.find(pageId);
+    if (pageIt != globalPageTable.end()) {
+        auto& entry = pageIt->second;
+
+        // If page is in memory, free the frame
+        if (entry.valid && entry.frameIndex != -1) {
+            frameTable[entry.frameIndex].occupied = false;
+            frameTable[entry.frameIndex].page = -1;
+            logPageOperation(pageId, "FRAME_FREED");
+        }
+
+        // If page is dirty, write to backing store before releasing
+        if (entry.dirty) {
+            writePageToBackingStore(pageId, entry.data);
+            logPageOperation(pageId, "FINAL_WRITE");
+        }
+
+        // Remove from page table
+        globalPageTable.erase(pageIt);
+    }
+
+    // Return page ID to reusable pool
+    reusablePageIds.push(pageId);
+    logPageOperation(pageId, "PAGE_RELEASED");
 }
