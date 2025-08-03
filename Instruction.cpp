@@ -201,7 +201,7 @@ void SleepInstruction::execute()
 void SleepInstruction::sleep()
 {
 	uint8_t sC = static_cast<uint8_t>(std::stoi(sleepCycles));
-	process->setSleeping(true, sC);
+	process->setIsSleeping(true, sC);
 }
 
 std::string SleepInstruction::getDetails() const {

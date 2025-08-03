@@ -30,13 +30,6 @@ Process::~Process() {
         logFile.close();
     }
 }
-size_t Process::getMemoryNeeded() {
-    return memoryRequired;
-}
-
-int Process::getId() const {
-    return id;
-}
 
 void Process::assignPages(const std::vector<int>& pages) {
     assignedPages = pages;
@@ -57,14 +50,13 @@ const std::vector<int>& Process::getAssignedPages() const {
     return assignedPages;
 }
 
-void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
-    instructionList.push_back(instruction);
+std::chrono::system_clock::time_point Process::getStartTime() const
+{
+    return std::chrono::system_clock::time_point();
 }
-  
+
 
 bool Process::executeNextInstruction() {
-
-    // if the process is sleeping, will countdown the sleep cycles until it wakes up
     if (isSleeping) {
         logInstruction("SLEEP", "SLEEP FOR " + std::to_string(remainingSleepCycles) + " CYCLES");
         remainingSleepCycles--;
@@ -141,6 +133,8 @@ std::vector<std::string> Process::getLogs() const {
     std::string line;
     while (std::getline(logFile, line)) {
         logs.push_back(line);
+    }
+}
 
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {
@@ -154,18 +148,6 @@ std::string Process::instructionTypeToString(Instruction::InstructionType type) 
     }
 }
 
-size_t Process::getMemoryNeeded() const {
-    return memoryRequired;
-}
-
-int Process::getId() const {
-    return id;
-}
-
-void Process::setAssignedCore(int core)
-{
-    assignedCore = core;
-}
 void Process::setIsSleeping(bool isSleeping, uint8_t sleepCycles)
 {
     this->isSleeping = isSleeping;
@@ -179,39 +161,9 @@ void Process::setIsFinished(bool isFinished)
     this->isFinished = isFinished;
 }
 
-int Process::getAssignedCore() const
-{
-    return assignedCore;
-}
-
-int Process::getCurrentInstructionIndex() const
-{
-    return currentInstruction;
-}
-
-size_t Process::getInstructionCount() const
-{
-    return instructionList.size();
-}
 
 
-size_t Process::getMemoryNeeded() const 
-{ 
-    return memoryRequired; 
-   
-}
-SymbolTable& Process::getSymbolTable()
-{
-    return symbolTable;
-}
 
-std::string Process::getName() const {
-    return name;
-}
-
-std::string Process::getCreationTime() const {
-    return creationTime;
-}
 
 int Process::getIsSleeping() const {
     return isSleeping;
@@ -219,10 +171,12 @@ int Process::getIsSleeping() const {
 
 int Process::getIsFinished() const {
     return isFinished;
+}
 
 int Process::getRemainingSleepCycles() const
 {
     return remainingSleepCycles;
+}
 
 int Process::getMemorySize() const {
     return memorySize;

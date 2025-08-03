@@ -546,8 +546,13 @@ int main() {
                         auto subInstr = make_shared<SubtractInstruction>(process.get(), dest, src1, src2);
                         process->addInstruction(subInstr);
                     }
-                    /*else if (type == "SLEEP") {
-                        
+                    else if (type == "SLEEP") {
+                        std::string sleepCycles = std::to_string((rand() % 10) + 1);
+
+                        tokens >> sleepCycles;
+
+                        auto sleepInstr = make_shared<SleepInstruction>( process.get(), sleepCycles);
+                        process->addInstruction(sleepInstr);
                     }
                     else if (type == "FOR") {
                         
@@ -557,7 +562,7 @@ int main() {
                     }
                     else if (type == "WRITE") {
                         
-                    }*/
+                    }
                     else {
                         std::cout << "Unknown instruction type: " << type << "\n";
                     }
@@ -586,7 +591,7 @@ int main() {
                             cout << log << "\n";  // All logs are PRINT messages now
                         }
 
-                        if (process->isFinished()) {
+                        if (process->getIsFinished()) {
                             cout << "Finished!\n";
                         }
                         else {

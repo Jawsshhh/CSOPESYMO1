@@ -91,44 +91,40 @@ void RRScheduler::workerLoop(int coreId) {
         bool processFinished = false;
         bool requeueProcess = true;
 
-        if (process->isSleeping()) {
-            process->setSleeping(true, process->getRemainingSleepTicks() - 1);
-        }
-        else {
-            int instructionIndex = process->getCurrentInstructionIndex();
-            int pageLocal = instructionIndex / static_cast<int>(frameSize);
+        int instructionIndex = process->getCurrentInstructionIndex();
+        int pageLocal = instructionIndex / static_cast<int>(frameSize);
 
-            if (pageLocal < assignedPages.size()) {
-                int globalPage = assignedPages[pageLocal];
-                bool pageAccessible = false;
+        if (pageLocal < assignedPages.size()) {
+            int globalPage = assignedPages[pageLocal];
+            bool pageAccessible = false;
 
-                // Try to access the page with retries
-                for (int retry = 0; retry < 3 && !pageAccessible; retry++) {
-                    pageAccessible = memoryManager.accessPage(globalPage);
-                    if (!pageAccessible) {
-                        memoryManager.pageFault(globalPage);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(3));
-                    }
+            // Try to access the page with retries
+            for (int retry = 0; retry < 3 && !pageAccessible; retry++) {
+                pageAccessible = memoryManager.accessPage(globalPage);
+                if (!pageAccessible) {
+                    memoryManager.pageFault(globalPage);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(3));
                 }
+            }
 
-                if (pageAccessible) {
-                    if (instructionIndex < process->getInstructionCount()) {
-                        process->executeNextInstruction();
-                        std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
-                        processFinished = process->getCurrentInstructionIndex() >= process->getInstructionCount();
-                    }
-                    else {
-                        processFinished = true;
-                    }
+            if (pageAccessible) {
+                if (instructionIndex < process->getInstructionCount()) {
+                    process->executeNextInstruction();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
+                    processFinished = process->getCurrentInstructionIndex() >= process->getInstructionCount();
+                }
+                else {
+                    processFinished = true;
                 }
             }
         }
+        
 
         // Handle process completion or requeue
         {
             std::lock_guard<std::mutex> lock(queueMutex);
             if (processFinished) {
-                process->setFinished(true);
+                process->setIsFinished(true);
                 processHandler.markProcessFinished(process->getId());
                 requeueProcess = false;
             }

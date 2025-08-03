@@ -26,11 +26,9 @@ public:
     std::vector<std::string> getLogs() const;
     void logInstruction(const std::string& type, const std::string& details);
 
-    void assignPages(const std::vector<int>& pages);
-
     void setMaxExecutionDelay(int delay);
     void setAssignedCore(int core);
-    void setSleeping(bool isSleeping, uint8_t sleepCycles);
+    void setIsSleeping(bool isSleeping, uint8_t sleepCycles);
     void setIsFinished(bool isFinished);
 
     SymbolTable& getSymbolTable();
@@ -40,14 +38,11 @@ public:
     int getAssignedCore() const;
     int getCurrentInstructionIndex() const;
     size_t getInstructionCount() const;
-    int getMemorySize() const;
     size_t getMemoryNeeded() const;
     int getMemorySize() const;
     int getIsSleeping() const;
     int getIsFinished() const;
     int getRemainingSleepCycles() const;
-    const std::vector<int>& getAssignedPages() const;
-
     static std::string instructionTypeToString(Instruction::InstructionType type);
 
     void assignPages(const std::vector<int>& pages);
