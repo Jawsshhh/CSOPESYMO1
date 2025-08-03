@@ -62,7 +62,7 @@ void RRScheduler::schedulerLoop() {
 void RRScheduler::workerLoop(int coreId) {
     while (running) {
         std::shared_ptr<Process> process = nullptr;
-
+		//fixed some issues with the core turn management
         // Wait for this core's turn
         {
             std::unique_lock<std::mutex> turnLock(coreTurnMutex);
