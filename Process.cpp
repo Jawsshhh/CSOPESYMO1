@@ -18,6 +18,7 @@ Process::Process(const std::string& name, int id, size_t memoryRequired) : name(
     logFile << "Process name: " << name << "\nLogs:\n";
     logFile.flush();
 }
+
 Process::~Process() {
     std::lock_guard<std::mutex> lock(fileMutex);
     if (logFile.is_open()) {
@@ -25,60 +26,38 @@ Process::~Process() {
         logFile.close();
     }
 }
-size_t Process::getMemoryNeeded() {
-    return memoryRequired;
+
+void Process::assignPages(const std::vector<int>& pages) {
+    assignedPages = pages;
+
+    std::lock_guard<std::mutex> lock(fileMutex);
+    if (logFile.is_open()) {
+        logFile << "[PAGE ASSIGNMENT] Assigned " << pages.size() << " pages to process (Page IDs: ";
+        for (size_t i = 0; i < pages.size(); ++i) {
+            logFile << pages[i];
+            if (i != pages.size() - 1) logFile << ", ";
+        }
+        logFile << ")\n";
+        logFile.flush();
+    }
 }
 
-int Process::getId() const {
-    return id;
-}
+bool Process::executeNextInstruction() {
 
-void Process::setAssignedCore(int core)
-{
-    assignedCore = core;
-}
+    // if the process is sleeping, will countdown the sleep cycles until it wakes up
+    if (isSleeping) {
+        logInstruction("SLEEP", "SLEEP FOR " + std::to_string(remainingSleepCycles) + " CYCLES");
+        remainingSleepCycles--;
 
-int Process::getAssignedCore() const
-{
-    return assignedCore;
-}
+        if (remainingSleepCycles <= 0) {
+            isSleeping = false;
+        }
 
-int Process::getCurrentInstructionIndex() const
-{
-    return currentInstruction;
-}
+        return false;
+    }
 
-size_t Process::getInstructionCount() const
-{
-    return instructionList.size();
-}
-
-void Process::setMaxExecutionDelay(int delay)
-{
-    maxExecDelay = std::max(0, delay);
-}
-
-SymbolTable& Process::getSymbolTable()
-{
-    return symbolTable;
-}
-
-std::string Process::getName() const {
-    return name;
-}
-
-std::string Process::getCreationTime() const {
-    return creationTime;
-}
-
-int Process::getMemorySize() const
-{
-    return memorySize;
-}
-
-
-void Process::executeNextInstruction() {
     if (currentInstruction < static_cast<int>(instructionList.size())) {
+
         auto instr = instructionList[currentInstruction++];
 
         instr->execute();
@@ -88,11 +67,15 @@ void Process::executeNextInstruction() {
             instr->getDetails()
         );
 
+        return true;
     }
 
     if (currentInstruction >= static_cast<int>(instructionList.size())) {
-        isFinishedFlag = true;
+        isFinished = true;
+        return false;
     }
+
+    return true;
 }
 
 
@@ -117,18 +100,6 @@ void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
     instructionList.push_back(instruction);
 }
 
-void Process::setFinished(bool finished)
-{
-     std::lock_guard<std::mutex> lock(stateMutex);
-     isFinishedFlag = finished;
-}
-
-bool Process::isFinished() const
-{
-    std::lock_guard<std::mutex> lock(stateMutex);
-    return isFinishedFlag || currentInstruction >= instructionList.size();
-}
-
 std::vector<std::string> Process::getLogs() const {
     std::vector<std::string> logs;
     std::string logFileName = "process_" + std::to_string(id) + ".txt";
@@ -147,46 +118,6 @@ std::vector<std::string> Process::getLogs() const {
 
     return logs;
 }
-bool Process::isSleeping() const {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    return sleeping && (remainingSleepTicks > 0);
-}
-
-//void Process::updateSleep() {
-//    if (sleeping && currentSleepInstruction) {
-//        std::cout << "[DEBUG] Process " << id << " updateSleep() called. Remaining: "
-//            << getRemainingSleepTicks() << "\n";  // TEMP DEBUG
-//        currentSleepInstruction->tickLog();
-//        if (!currentSleepInstruction->isSleeping()) {
-//            sleeping = false;
-//            currentSleepInstruction = nullptr;
-//        }
-//    }
-//}
-
-void Process::setSleeping(bool state, uint8_t ticks) {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    sleeping = state;
-    remainingSleepTicks = ticks;
-}
-
-int Process::getRemainingSleepTicks() const {
-    std::lock_guard<std::mutex> lock(stateMutex);
-    return remainingSleepTicks;
-}
-std::string Process::getStatus() const {
-    return isFinished() ? "Finished!" : "Running";
-}
-
-void Process::setCurrentSleepInstruction(std::shared_ptr<SleepInstruction> instr)
-{
-    currentSleepInstruction = std::dynamic_pointer_cast<SleepInstruction>(instr);
-}
-
-std::shared_ptr<SleepInstruction> Process::getCurrentSleepInstruction()
-{
-    return currentSleepInstruction;
-}
 
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {
@@ -198,4 +129,89 @@ std::string Process::instructionTypeToString(Instruction::InstructionType type) 
     case Instruction::InstructionType::FOR:      return "FOR";
     default: return "UNKNOWN";
     }
+}
+
+size_t Process::getMemoryNeeded() const {
+    return memoryRequired;
+}
+
+int Process::getId() const {
+    return id;
+}
+
+void Process::setAssignedCore(int core)
+{
+    assignedCore = core;
+}
+
+void Process::setSleeping(bool isSleeping, uint8_t sleepCycles)
+{
+    this->isSleeping = isSleeping;
+    this->remainingSleepCycles = sleepCycles;
+}
+
+void Process::setIsFinished(bool isFinished)
+{
+    std::lock_guard<std::mutex> lock(stateMutex);
+    this->isFinished = isFinished;
+}
+
+int Process::getAssignedCore() const
+{
+    return assignedCore;
+}
+
+int Process::getCurrentInstructionIndex() const
+{
+    return currentInstruction;
+}
+
+size_t Process::getInstructionCount() const
+{
+    return instructionList.size();
+}
+
+void Process::setMaxExecutionDelay(int delay)
+{
+    maxExecDelay = std::max(0, delay);
+}
+
+size_t Process::getMemoryNeeded() const 
+{ 
+    return memoryRequired; 
+}
+
+SymbolTable& Process::getSymbolTable()
+{
+    return symbolTable;
+}
+
+std::string Process::getName() const {
+    return name;
+}
+
+std::string Process::getCreationTime() const {
+    return creationTime;
+}
+
+int Process::getIsSleeping() const {
+    return isSleeping;
+}
+
+int Process::getIsFinished() const {
+    return isFinished;
+}
+
+int Process::getRemainingSleepCycles() const
+{
+    return remainingSleepCycles;
+}
+
+const std::vector<int>& Process::getAssignedPages() const
+{
+    return assignedPages;
+}
+
+int Process::getMemorySize() const {
+    return memorySize;
 }

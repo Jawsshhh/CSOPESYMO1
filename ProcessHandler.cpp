@@ -36,7 +36,7 @@ void ProcessHandler::updateProcessState(int processId, bool isFinished) {
     std::lock_guard<std::mutex> lock(processMutex);
     for (auto& process : running) {
         if (process->getId() == processId) {
-            process->setFinished(isFinished);
+            process->setIsFinished(isFinished);
             break;
         }
     }
@@ -106,7 +106,7 @@ std::vector<std::shared_ptr<Process>> ProcessHandler::getProcessesByCore(int cor
 bool ProcessHandler::hasUnfinishedProcessOnCore(int coreId) {
     std::lock_guard<std::mutex> lock(processMutex);
     for (const auto& process : running) {
-        if (process->getAssignedCore() == coreId && !process->isFinished()) {
+        if (process->getAssignedCore() == coreId && !process->getIsFinished()) {
             return true;
         }
     }
@@ -116,7 +116,7 @@ bool ProcessHandler::hasUnfinishedProcessOnCore(int coreId) {
 std::shared_ptr<Process> ProcessHandler::getFirstUnfinishedProcessOnCore(int coreId) {
     std::lock_guard<std::mutex> lock(processMutex);
     for (const auto& process : running) {
-        if (process->getAssignedCore() == coreId && !process->isFinished()) {
+        if (process->getAssignedCore() == coreId && !process->getIsFinished()) {
             return process;
         }
     }
@@ -129,7 +129,7 @@ void ProcessHandler::markProcessFinished(int processId) {
     auto it = running.begin();
     while (it != running.end()) {
         if ((*it)->getId() == processId) {
-            (*it)->setFinished(true);
+            (*it)->setIsFinished(true);
             finished.push_back(*it);
             it = running.erase(it);  // Remove and continue
         }
@@ -145,7 +145,7 @@ std::vector<std::shared_ptr<Process>> ProcessHandler::getCurrentlyActiveProcesse
 
     for (const auto& process : running) {
         int core = process->getAssignedCore();
-        if (core >= 0 && core < numCores && !process->isFinished()) {
+        if (core >= 0 && core < numCores && !process->getIsFinished()) {
             if (!active[core]) {
                 active[core] = process;
             }

@@ -91,7 +91,7 @@ void RRScheduler::workerLoop(int coreId) {
 
         if (process) {
             unsigned cyclesUsed = 0;
-            while (cyclesUsed < quantum && !process->isFinished() && running) {
+            while (cyclesUsed < quantum && !process->getIsFinished() && running) {
                 process->executeNextInstruction();
                 cyclesUsed++;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
@@ -100,7 +100,7 @@ void RRScheduler::workerLoop(int coreId) {
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
 
-                if (process->isFinished()) {
+                if (process->getIsFinished()) {
                     processHandler.markProcessFinished(process->getId());
                     memoryManager.deallocateMemory(process->getId());
                 }

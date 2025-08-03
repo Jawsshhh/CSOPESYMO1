@@ -29,9 +29,9 @@ public:
 protected:
     Process* process;
     InstructionType instructionType;
-    std::vector<std::string> args;               // arguments: var names or values
-    std::vector<Instruction> body;               // for FOR loops
-    int repeatCount = 0;                         // for FOR loops
+    std::vector<std::string> args;              
+    std::vector<Instruction> body;              
+    int repeatCount = 0;                        
 };
 
 class PrintInstruction : public Instruction {
@@ -48,12 +48,12 @@ class DeclareInstruction : public Instruction {
 public:
     DeclareInstruction(Process* process, const std::string& varName, uint16_t value);
     void execute() override;
-    std::string getDetails() const override;  // Add this line
+    std::string getDetails() const override;  
     bool performDeclaration();
 
 private:
     std::string varName;
-    uint16_t value;  // Changed from std::string to uint16_t to match constructor
+    uint16_t value;  
 };
 
 class AddInstruction : public Instruction {
@@ -87,16 +87,15 @@ private:
     std::string var3;
 };
 
-class SleepInstruction : public Instruction, public std::enable_shared_from_this<SleepInstruction> {
+class SleepInstruction : public Instruction {
 public:
-    SleepInstruction(Process* process, uint8_t x);
+    SleepInstruction(Process* process, std::string sleepCycles);
     void execute() override;
+    void sleep();
     std::string getDetails() const override;
-    std::vector<int> tickLog;    
-    bool isSleeping = false;
 
 private:
-    uint8_t x;
+    std::string sleepCycles;
 };
 
 class ForInstruction : public Instruction {
@@ -105,4 +104,5 @@ public:
     void execute() override;
 private:
     std::vector<Instruction> instructionList;
+    int repeats;
 };
