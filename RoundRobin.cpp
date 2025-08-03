@@ -55,7 +55,7 @@ void RRScheduler::schedulerLoop() {
             cv.notify_all();
         }
         lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -72,7 +72,6 @@ void RRScheduler::workerLoop(int coreId) {
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             if (readyQueue.empty()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
             }
 
@@ -102,7 +101,7 @@ void RRScheduler::workerLoop(int coreId) {
                     int retries = 3;
                     while (!memoryManager.accessPage(globalPage) && retries-- > 0) {
                         memoryManager.pageFault(globalPage);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(3));
                     }
 
                     if (!memoryManager.accessPage(globalPage)) {
@@ -159,6 +158,5 @@ void RRScheduler::workerLoop(int coreId) {
             // memoryManager.generateSnapshot(filename, quantumCycle);
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
