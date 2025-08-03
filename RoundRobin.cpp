@@ -63,100 +63,95 @@ void RRScheduler::workerLoop(int coreId) {
     while (running) {
         std::shared_ptr<Process> process = nullptr;
 
+        // Wait for this core's turn
         {
             std::unique_lock<std::mutex> turnLock(coreTurnMutex);
             cv.wait(turnLock, [&]() { return coreId == nextCoreId || !running; });
             if (!running) break;
         }
 
+        // Get a process to execute
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            if (readyQueue.empty()) {
-                continue;
+            if (!readyQueue.empty()) {
+                process = readyQueue.front();
+                readyQueue.pop();
+                process->setAssignedCore(coreId);
+                coreAvailable[coreId] = false;
+                processHandler.insertProcess(process);
             }
-
-            process = readyQueue.front();
-            readyQueue.pop();
-
-            process->setAssignedCore(coreId);
-            coreAvailable[coreId] = false;
-            processHandler.insertProcess(process);
         }
 
-        if (process) {
-            const auto& assignedPages = process->getAssignedPages();
+        if (!process) {
+            continue;
+        }
 
-            if (process->isSleeping()) {
-                process->setSleeping(true, process->getRemainingSleepTicks() - 1);
-                std::lock_guard<std::mutex> lock(queueMutex);
-                readyQueue.push(process);
-            }
-            else {
-                int instructionIndex = process->getCurrentInstructionIndex();
-                int pageLocal = instructionIndex / static_cast<int>(frameSize);
+        // Execute the process
+        const auto& assignedPages = process->getAssignedPages();
+        bool processFinished = false;
+        bool requeueProcess = true;
 
-                if (pageLocal < assignedPages.size()) {
-                    int globalPage = assignedPages[pageLocal];
+        if (process->isSleeping()) {
+            process->setSleeping(true, process->getRemainingSleepTicks() - 1);
+        }
+        else {
+            int instructionIndex = process->getCurrentInstructionIndex();
+            int pageLocal = instructionIndex / static_cast<int>(frameSize);
 
-                    int retries = 3;
-                    while (!memoryManager.accessPage(globalPage) && retries-- > 0) {
+            if (pageLocal < assignedPages.size()) {
+                int globalPage = assignedPages[pageLocal];
+                bool pageAccessible = false;
+
+                // Try to access the page with retries
+                for (int retry = 0; retry < 3 && !pageAccessible; retry++) {
+                    pageAccessible = memoryManager.accessPage(globalPage);
+                    if (!pageAccessible) {
                         memoryManager.pageFault(globalPage);
                         std::this_thread::sleep_for(std::chrono::milliseconds(3));
                     }
+                }
 
-                    if (!memoryManager.accessPage(globalPage)) {
-                        std::lock_guard<std::mutex> lock(queueMutex);
-                        readyQueue.push(process);
-                    }
-                    else if (process->getCurrentInstructionIndex() < process->getInstructionCount()) {
+                if (pageAccessible) {
+                    if (instructionIndex < process->getInstructionCount()) {
                         process->executeNextInstruction();
                         std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
-                        std::lock_guard<std::mutex> lock(queueMutex);
-                        if (process->isFinished()) {
-                            processHandler.markProcessFinished(process->getId());
-                        }
-                        else {
-                            readyQueue.push(process);
-                        }
-					}
-                    else if (process->getCurrentInstructionIndex() >= process->getInstructionCount()) {
-                        process->setFinished(true);
-                        processHandler.markProcessFinished(process->getId());
-					}
-
-                    else if (!process->isFinished()) {
-                        process->executeNextInstruction();
-                        std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
-
-                        std::lock_guard<std::mutex> lock(queueMutex);
-                        if (process->isFinished()) {
-                            processHandler.markProcessFinished(process->getId());
-                        }
-                        else {
-                            readyQueue.push(process);
-                        }
+                        processFinished = process->getCurrentInstructionIndex() >= process->getInstructionCount();
+                    }
+                    else {
+                        processFinished = true;
                     }
                 }
-                else {
-                    std::lock_guard<std::mutex> lock(queueMutex);
-                    readyQueue.push(process);
-                }
+            }
+        }
+
+        // Handle process completion or requeue
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            if (processFinished) {
+                process->setFinished(true);
+                processHandler.markProcessFinished(process->getId());
+                requeueProcess = false;
+            }
+
+            if (requeueProcess) {
+                readyQueue.push(process);
             }
 
             coreAvailable[coreId] = true;
         }
 
+        // Move to next core
         {
             std::lock_guard<std::mutex> turnLock(coreTurnMutex);
             nextCoreId = (nextCoreId + 1) % coreAvailable.size();
             cv.notify_all();
         }
 
+        // Generate snapshot if needed
         if (coreId == 0 && process && process->getInstructionCount() > 0) {
             std::lock_guard<std::mutex> snapLock(snapshotMutex);
             std::string filename = "memory_stamp_" + std::to_string(quantumCycle++) + ".txt";
             // memoryManager.generateSnapshot(filename, quantumCycle);
         }
-
     }
 }
