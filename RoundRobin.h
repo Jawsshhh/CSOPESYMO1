@@ -14,6 +14,8 @@ public:
 
     void addProcess(std::shared_ptr<Process> process);
 
+    bool tryAllocateProcessPages(std::shared_ptr<Process> process);
+
 private:
     size_t frameSize;
     void schedulerLoop() override;
@@ -28,5 +30,6 @@ private:
     std::mutex snapshotMutex;
     int globalPageCounter = 0;
 
+    std::queue<std::shared_ptr<Process>> pendingProcesses;  // ADD THIS LINE
 
 };

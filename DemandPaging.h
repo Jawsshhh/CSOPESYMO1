@@ -16,13 +16,16 @@ public:
 
     void registerProcessPages(int pid, const std::vector<int>& pages);
     void releaseProcessPages(int pid);
+    void releasePageInternal(int pageId);
     void initializePageData(int page, const std::string& data);
     void generateSnapshot(const std::string& filename, int quantumCycle);
+    void releasePage(int pageId);
 
     size_t getUsedMemory() const;
     size_t getFreeMemory() const;
     size_t getFrameSize() const;
     int getNextGlobalPageId();
+
 
 private:
     struct Frame {
@@ -60,7 +63,6 @@ private:
     std::string readPageFromBackingStore(int page);
     bool pageExistsInBackingStore(int page);
     void logPageOperation(int page, const std::string& operation, bool success = true);
-    void releasePage(int pageId);
 };
 
 #endif // DEMAND_PAGING_H

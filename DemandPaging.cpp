@@ -326,8 +326,6 @@ void DemandPagingAllocator::initializePageData(int page, const std::string& data
     logPageOperation(page, "INIT_MEMORY_ONLY");
 }
 
-
-
 size_t DemandPagingAllocator::getUsedMemory() const {
     std::lock_guard<std::mutex> lock(memoryMutex);
     size_t used = 0;
@@ -376,7 +374,7 @@ void DemandPagingAllocator::releaseProcessPages(int pid) {
 
     // Release each page assigned to this process
     for (int pageId : it->second) {
-        releasePage(pageId);
+        releasePageInternal(pageId);  // Use internal method to avoid double locking
     }
 
     // Remove process from map
@@ -385,7 +383,8 @@ void DemandPagingAllocator::releaseProcessPages(int pid) {
     logPageOperation(-1, "PROCESS_" + std::to_string(pid) + "_RELEASED");
 }
 
-void DemandPagingAllocator::releasePage(int pageId) {
+// FIXED: New internal method that doesn't acquire locks (assumes caller has lock)
+void DemandPagingAllocator::releasePageInternal(int pageId) {
     // Remove from global page table
     auto pageIt = globalPageTable.find(pageId);
     if (pageIt != globalPageTable.end()) {
@@ -399,16 +398,31 @@ void DemandPagingAllocator::releasePage(int pageId) {
         }
 
         // If page is dirty, write to backing store before releasing
-        if (entry.dirty) {
-            writePageToBackingStore(pageId, entry.data);
-            logPageOperation(pageId, "FINAL_WRITE");
+        // Store the data before erasing from page table
+        std::string pageData;
+        bool needsWrite = entry.dirty;
+        if (needsWrite) {
+            pageData = entry.data;
         }
 
-        // Remove from page table
+        // Remove from page table first
         globalPageTable.erase(pageIt);
+
+        // Now handle backing store write without holding memory mutex
+        if (needsWrite) {
+            bool writeSuccess = writePageToBackingStore(pageId, pageData);
+            logPageOperation(pageId, writeSuccess ? "FINAL_WRITE" : "FINAL_WRITE_FAILED");
+        }
     }
 
     // Return page ID to reusable pool
     reusablePageIds.push(pageId);
     logPageOperation(pageId, "PAGE_RELEASED");
 }
+
+// FIXED: Use internal method to avoid race conditions
+void DemandPagingAllocator::releasePage(int pageId) {
+    std::lock_guard<std::mutex> lock(memoryMutex);
+    releasePageInternal(pageId);
+}
+
