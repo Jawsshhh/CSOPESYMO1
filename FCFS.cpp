@@ -57,7 +57,7 @@ void FCFSScheduler::workerLoop(int coreId) {
 
             auto coreProcs = processHandler.getProcessesByCore(coreId);
             auto it = std::find_if(coreProcs.begin(), coreProcs.end(), [](const auto& p) {
-                return !p->isFinished();
+                return !p->getIsFinished();
                 });
             if (it != coreProcs.end()) {
                 process = *it;
@@ -65,7 +65,7 @@ void FCFSScheduler::workerLoop(int coreId) {
         }
 
         if (process) {
-            while (!process->isFinished() && running) {
+            while (!process->getIsFinished() && running) {
                 process->executeNextInstruction();
 
                 auto start = std::chrono::high_resolution_clock::now();
@@ -77,8 +77,8 @@ void FCFSScheduler::workerLoop(int coreId) {
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
-                if (process->isFinished()) {
-                    process->setFinished(true);
+                if (process->getIsFinished()) {
+                    process->setIsFinished(true);
                 }
                 coreAvailable[coreId] = true;
                 cv.notify_all();

@@ -20,8 +20,6 @@ using namespace std;
 #include "RoundRobin.h"
 #include "CPUTick.h"
 
-CPUTick cpuTick;
-
 // In main.cpp
 struct Config {
     int num_cpu = 0;
@@ -40,6 +38,7 @@ struct Config {
     std::mutex populate_mutex;
     std::condition_variable populate_cv;
 };
+
 class ConsoleGeneral {
 public:
     virtual void draw() { cout << "Print Terminal"; };
@@ -96,7 +95,7 @@ public:
         setTimestamp(ss.str());
     };
 
-    Screen(const std::string& name, int currentLine = 1, int totalLines = 100, int memorySize = 0) {
+    Screen(const std::string& name, int currentLine = 1, int totalLines = 100, size_t memorySize = 0) {
         setName(name);
         setCurrentLine(currentLine);
         setTotalLines(totalLines);
@@ -230,62 +229,75 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
         size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
         auto process = make_shared<Process>(processName, processCounter, mem_per_proc);
-        consoleManager.addNewScreen(processName, process, mem_per_proc);      // Not sure if tama 'to....
+        consoleManager.addNewScreen(processName, process, mem_per_proc);
 
         // Generate random number of instructions
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 4;
+            int instructionType = rand() % 5;
             switch (instructionType) {
-            case 0: {
-                auto printInstr = make_shared<PrintInstruction>(
-                    process.get(),
-                    "Hello from " + processName
-                );
-                process->addInstruction(printInstr);
-                break;
-            }
-            case 1: {
-                std::string varName = "var";
-                uint16_t value = 10;
-                auto declareInstr = make_shared<DeclareInstruction>(
-                    process.get(),
-                    varName,
-                    value
-                );
-                process->addInstruction(declareInstr);
-                break;
-            }
-            case 2: {
-                std::string destVar = "0";
-                std::string src1 = std::to_string(rand() % 50);
-                std::string src2 = std::to_string(rand() % 50);
+                case 0: {
+                    auto printInstr = make_shared<PrintInstruction>(
+                        process.get(),
+                        "Hello from " + processName
+                    );
+                    process->addInstruction(printInstr);
+                    break;
+                }
+                case 1: {
+                    std::string varName = "var";
+                    uint16_t value = 10;
+                    auto declareInstr = make_shared<DeclareInstruction>(
+                        process.get(),
+                        varName,
+                        value
+                    );
+                    process->addInstruction(declareInstr);
+                    break;
+                }
+                case 2: {
+                    std::string destVar = "0";
+                    std::string src1 = std::to_string(rand() % 50);
+                    std::string src2 = std::to_string(rand() % 50);
 
-                auto addInstr = make_shared<AddInstruction>(
-                    process.get(),
-                    destVar,
-                    src1,
-                    src2
-                );
-                process->addInstruction(addInstr);
-                break;
-            }
-            case 3: {
-                std::string destVar = "var1";
-                std::string src1 = std::to_string(rand() % 50);
-                std::string src2 = std::to_string(rand() % 50);
+                    auto addInstr = make_shared<AddInstruction>(
+                        process.get(),
+                        destVar,
+                        src1,
+                        src2
+                    );
+                    process->addInstruction(addInstr);
+                    break;
+                }
+                case 3: {
+                    std::string destVar = "var1";
+                    std::string src1 = std::to_string(rand() % 50);
+                    std::string src2 = std::to_string(rand() % 50);
 
-                auto subInstr = make_shared<SubtractInstruction>(
-                    process.get(),
-                    destVar,
-                    src1,
-                    src2
-                );
-                process->addInstruction(subInstr);
-                break;
-            }
+                    auto subInstr = make_shared<SubtractInstruction>(
+                        process.get(),
+                        destVar,
+                        src1,
+                        src2
+                    );
+                    process->addInstruction(subInstr);
+                    break;
+                }
+                case 4: {
+                    std::string sleepCycles = std::to_string((rand() % 10) + 1);
+
+                    auto sleepInstr = make_shared<SleepInstruction>(
+                        process.get(),
+                        sleepCycles
+                    );
+                    process->addInstruction(sleepInstr);
+                    break;
+                }
+                case 5: {
+                    break;
+                }
             
             }
         }
@@ -343,8 +355,7 @@ int main() {
                     }
                 }
                 config.initialized = true;
-                cpuTick.start(config.batch_process_freq);
-
+               
                 cout << "System initialized with the following configuration:\n"
                     << "Number of CPUs: " << config.num_cpu << "\n"
                     << "Scheduler: " << config.scheduler << "\n"
@@ -358,14 +369,6 @@ int main() {
                     << "Minimum process memory: " << config.min_mem_per_proc << "\n"
                     << "Maximum process memory: " << config.max_mem_per_proc << "\n";
 
-
-
-
-
-
-
-
-                
                 if (config.scheduler == "fcfs") {
                     scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(
                         config.num_cpu,
@@ -435,14 +438,14 @@ int main() {
                     else if (subCommand == "process-smi") {
                         cout << "Process name: " << process->getName() << "\n";
                         cout << "ID: " << process->getId() << "\n";
-                        cout << "Messages:\n";  // Changed from "Logs:"
+                        cout << "Messages:\n"; 
 
                         auto logs = process->getLogs();
                         for (const auto& log : logs) {
-                            cout << log << "\n";  // All logs are PRINT messages now
+                            cout << log << "\n";  
                         }
 
-                        if (process->isFinished()) {
+                        if (process->getIsFinished()) {
                             cout << "Finished!\n";
                         }
                         else {
@@ -458,7 +461,6 @@ int main() {
             }
         }
 
-        // Added "screen -c"
         else if (inputCommand.rfind("screen -c ", 0) == 0) {
             std::string fullCmd = inputCommand.substr(10);  // Remove "screen -c "
             size_t quoteStart = fullCmd.find('"');
@@ -606,7 +608,7 @@ int main() {
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
 
-            if (!process /*|| process->isFinished()*/) {
+            if (!process ) {
                 cout << "Process " << name << " not found.\n";
                 continue;
             }
@@ -616,7 +618,7 @@ int main() {
 
             string subCommand;
             while (getline(cin, subCommand)) {
-                //cout << "Enter command:> ";
+               
                 if (subCommand == "exit") {
                     consoleManager.destroyScreen();
                     consoleManager.switchConsole("MAIN");
@@ -627,14 +629,14 @@ int main() {
                     cout << "===================\n";
                     cout << "Process name: " << process->getName() << "\n";
                     cout << "ID: " << process->getId() << "\n";
-                    cout << "Messages:\n";  // Changed from "Logs:"
+                    cout << "Messages:\n";  
 
                     auto logs = process->getLogs();
                     for (const auto& log : logs) {
-                        cout << log << "\n";  // All logs are PRINT messages now
+                        cout << log << "\n"; 
                     }
 
-                    if (process->isFinished()) {
+                    if (process->getIsFinished()) {
                         cout << "Finished!\n";
                         cout << "===================\n";
                     }
@@ -651,7 +653,6 @@ int main() {
                 
             }
         }
-
 
         else if (inputCommand == "scheduler-start") {
             if (!config.initialized) {
@@ -736,7 +737,6 @@ int main() {
         }
 
     }
-    cpuTick.stop();
     return 0;
 
 }
