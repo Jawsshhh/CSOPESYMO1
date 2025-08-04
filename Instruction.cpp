@@ -3,6 +3,7 @@
 #include "ProcessHandler.h"
 #include "CPUTick.h"
 #include <iostream>
+#include <limits>
 
 Instruction::Instruction(Process* process, InstructionType instructionType)
 {
@@ -131,8 +132,10 @@ void AddInstruction::add()
 
 	uint16_t val2 = getValue(var2);
 	uint16_t val3 = getValue(var3);
-
-	uint16_t result = val2 + val3;
+	uint32_t sum = static_cast<uint32_t>(val2) + static_cast<uint32_t>(val3);
+	uint16_t result = (sum > std::numeric_limits<uint16_t>::max())
+		? std::numeric_limits<uint16_t>::max()
+		: static_cast<uint16_t>(sum);
 
 	process->getSymbolTable().updateVariable(var1, std::to_string(result));
 
@@ -183,8 +186,10 @@ void SubtractInstruction::subtract()
 
 	uint16_t val2 = getValue(var2);
 	uint16_t val3 = getValue(var3);
-
-	uint16_t result = val2 - val3;
+	int diff = static_cast<int>(val2) - static_cast<int>(val3);
+	uint16_t result = (diff < 0)
+		? 0
+		: static_cast<uint16_t>(diff);
 
 	process->getSymbolTable().updateVariable(var1, std::to_string(result));
 }

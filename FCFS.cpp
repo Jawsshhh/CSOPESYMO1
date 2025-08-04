@@ -4,7 +4,7 @@
 
 
 FCFSScheduler::FCFSScheduler(int numCores, size_t maxMemory, size_t frameSize, int delays_per_exec)
-    : Scheduler(numCores, maxMemory, frameSize), delays_per_exec(delays_per_exec) {
+    : Scheduler(numCores, maxMemory, frameSize, "csopesy-backing-store.txt"), delays_per_exec(delays_per_exec) {
 
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;

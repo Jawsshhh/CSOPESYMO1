@@ -13,7 +13,7 @@
 
 class Scheduler {
 public:
-    Scheduler(int numCores, size_t maxMemory, size_t frameSize);
+    Scheduler(int numCores, size_t maxMemory, size_t frameSize, const std::string& backingStore);
     virtual ~Scheduler();
 
     virtual void start();

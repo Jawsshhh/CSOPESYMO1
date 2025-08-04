@@ -6,7 +6,7 @@
 
 RRScheduler::RRScheduler(int numCores, int quantum, int delays_per_exec,
     size_t maxMemory, size_t frameSize)
-    : Scheduler(numCores, maxMemory, frameSize),
+    : Scheduler(numCores, maxMemory, frameSize, "csopesy-backing-store.txt"),
     quantum(quantum),
     delays_per_exec(delays_per_exec),
     frameSize(frameSize) {

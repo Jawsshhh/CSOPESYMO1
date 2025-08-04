@@ -272,7 +272,12 @@ std::shared_ptr<Instruction> parseInstruction(const std::string& instrLine, Proc
 }
 
 std::shared_ptr<ForInstruction> parseForInstruction(const std::string& forLine, Process* process) {
-   
+    size_t depth = std::count(forLine.begin(), forLine.end(), '[');
+    
+    if (depth > 3) {
+        return nullptr;
+    }
+
     size_t startBracket = forLine.find('[');
     size_t endBracket = forLine.find(']');
     size_t repeatPos = forLine.find("REPEAT");
@@ -584,6 +589,10 @@ int main() {
                             cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
                                 << "/" << process->getInstructionCount() << "\n";
                         }
+                    }
+                    else if (subCommand == "memory-violation") {
+                        cout << process->getMemoryViolationDetails() << "\n";  // CHANGED
+                        cout << "Enter command: ";
                     }
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
