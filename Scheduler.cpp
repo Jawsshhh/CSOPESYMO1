@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 Scheduler::Scheduler(int numCores, size_t maxMemory, size_t frameSize)
-    : numCores(numCores), running(false), memoryManager(maxMemory, frameSize) {
+    : numCores(numCores), running(false), memoryManager(maxMemory, frameSize, "csopesy-backing-store.txt") {
     coreAvailable.resize(numCores, true);
 }
 

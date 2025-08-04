@@ -32,6 +32,7 @@ public:
     void setIsFinished(bool isFinished);
     void setMemoryAccessViolation(bool violation, const std::string& address);
     void setBaseMemoryAddress(size_t address);
+    void setCurrentForLoop(std::shared_ptr<ForInstruction> forLoop);
 
     SymbolTable& getSymbolTable();
     std::string getName() const;
@@ -49,6 +50,8 @@ public:
     bool hasMemoryAccessViolation() const;
     std::string getMemoryViolationDetails() const;
     size_t getBaseMemoryAddress() const;
+    bool getIsInForLoop() const;
+    std::shared_ptr<ForInstruction> getCurrentForLoop() const;
 
     bool canAddVariable() const;
 
@@ -58,14 +61,22 @@ public:
     const std::vector<int>& getAssignedPages() const;
 
     std::chrono::system_clock::time_point getStartTime() const;
+    void clearForLoop();
 
+    void logSleepStart(uint8_t cycles);
 
+    void logSleepEnd();
+
+    std::string timestamp() const;
+
+    bool shouldWakeUp() const;
 
 private:
     SymbolTable symbolTable;
     std::vector<std::shared_ptr<Instruction>> instructionList;
     std::vector<int> assignedPages;
     std::unordered_map<size_t, uint16_t> memoryMap;
+    std::shared_ptr<ForInstruction> currentForLoop;
     
     std::string name;
     int id;
@@ -87,6 +98,7 @@ private:
     bool isFinished = false;
     bool isSleeping = false;
     bool hasMemoryViolation = false;
+    bool isInForLoop = false;
     int remainingSleepCycles = 0;
 
     int delayCount = 0;

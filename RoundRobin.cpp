@@ -83,161 +83,142 @@ bool RRScheduler::tryAllocateProcessPages(std::shared_ptr<Process> process) {
 
 void RRScheduler::schedulerLoop() {
     while (running) {
-        std::unique_lock<std::mutex> lock(queueMutex);
-
-        // Try to process pending processes (retry page allocation)
-        if (!pendingProcesses.empty()) {
-            std::queue<std::shared_ptr<Process>> stillPending;
-
-            while (!pendingProcesses.empty()) {
-                auto process = pendingProcesses.front();
-                pendingProcesses.pop();
-
-                if (tryAllocateProcessPages(process)) {
-                    readyQueue.push(process);
-                    //std::cout << "[INFO] Retry successful: Process " << process->getId() << " moved to ready queue" << std::endl;
+       
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            auto it = sleepingProcesses.begin();
+            while (it != sleepingProcesses.end()) {
+                auto& proc = *it;
+                proc->executeNextInstruction();
+                if (!proc->getIsSleeping()) {
+                    readyQueue.push(proc);
+                    it = sleepingProcesses.erase(it);
                 }
                 else {
-                    stillPending.push(process);
+                    ++it;
                 }
             }
-
-            // Put back processes that still can't be allocated
-            pendingProcesses = stillPending;
         }
 
-        if (!readyQueue.empty()) {
-            cv.notify_all();
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            std::queue<std::shared_ptr<Process>> still;
+            while (!pendingProcesses.empty()) {
+                auto p = pendingProcesses.front(); pendingProcesses.pop();
+                if (tryAllocateProcessPages(p))
+                    readyQueue.push(p);
+                else
+                    still.push(p);
+            }
+            pendingProcesses = std::move(still);
+            if (!readyQueue.empty())
+                cv.notify_all();
         }
-        lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Slightly longer delay for retry logic
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
 void RRScheduler::workerLoop(int coreId) {
     while (running) {
-        totalCpuTicks++;
-        std::shared_ptr<Process> process = nullptr;
+        totalCpuTicks.fetch_add(1);
 
-        // Wait for this core's turn
+        bool gotTurn = false;
         {
             std::unique_lock<std::mutex> turnLock(coreTurnMutex);
-            bool gotTurn = cv.wait_for(turnLock, std::chrono::milliseconds(100), [&]() {
-                return coreId == nextCoreId || !running;
-                });
-
-            if (!running) break;
-
-            if (!gotTurn) {
-                nextCoreId = (nextCoreId + 1) % coreAvailable.size();
-                cv.notify_all();
-                idleCpuTicks++;
-                continue;
-            }
+            gotTurn = cv.wait_for(turnLock,
+                std::chrono::milliseconds(100),
+                [&] { return !running.load() || coreId == nextCoreId; });
         }
 
-        // Try to get a process to run
-        bool gotProcess = false;
+        if (!running) {
+            break;
+        }
+
+        if (!gotTurn) {
+            {
+                std::lock_guard<std::mutex> guard(coreTurnMutex);
+                nextCoreId = (nextCoreId + 1) % coreAvailable.size();
+            }
+            cv.notify_all();
+            idleCpuTicks.fetch_add(1);
+            continue;
+        }
+        
+        std::shared_ptr<Process> process = nullptr;
         {
-            std::unique_lock<std::mutex> lock(queueMutex);
+            std::lock_guard<std::mutex> lg(queueMutex);
             if (!readyQueue.empty()) {
                 process = readyQueue.front();
                 readyQueue.pop();
                 process->setAssignedCore(coreId);
                 coreAvailable[coreId] = false;
                 processHandler.insertProcess(process);
-                gotProcess = true;
             }
         }
 
-        // If no process was found, pass turn to next core
-        if (!gotProcess) {
-            std::lock_guard<std::mutex> turnLock(coreTurnMutex);
-            nextCoreId = (nextCoreId + 1) % coreAvailable.size();
+        if (!process) {
+            {
+                std::lock_guard<std::mutex> gl(coreTurnMutex);
+                nextCoreId = (nextCoreId + 1) % coreAvailable.size();
+            }
             cv.notify_all();
-            idleCpuTicks++;
+            idleCpuTicks.fetch_add(1);
             continue;
         }
 
-        // Execute the process for the quantum
+      
         bool processFinished = false;
         bool requeueProcess = true;
         int instructionsExecuted = 0;
 
         try {
-            // Execute for quantum cycles or until process finishes
             while (instructionsExecuted < quantum &&
-                process->getCurrentInstructionIndex() < process->getInstructionCount()) {
-                activeCpuTicks++;
+                   process->getCurrentInstructionIndex() < process->getInstructionCount())
+            {
+                activeCpuTicks.fetch_add(1);
 
-                const auto& assignedPages = process->getAssignedPages();
-                if (!assignedPages.empty()) {
-                    // Calculate which page is needed for current instruction
-                    int pageLocal = process->getCurrentInstructionIndex() / static_cast<int>(frameSize);
-                    if (pageLocal < assignedPages.size()) {
-                        int globalPage = assignedPages[pageLocal];
-
-                        // Try to access the page
-                        bool pageAccessible = false;
-                        for (int retry = 0; retry < 3 && !pageAccessible; retry++) {
-                            pageAccessible = memoryManager.accessPage(globalPage);
-                            if (!pageAccessible) {
-                                if (!memoryManager.pageFault(globalPage)) {
-                                    throw std::runtime_error("Page fault handling failed for page " + std::to_string(globalPage));
-                                }
-                                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                            }
-                        }
-
-                        if (pageAccessible) {
-                            process->executeNextInstruction();
-                            instructionsExecuted++;
-
-                            if (delays_per_exec > 0) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
-                            }
-                        }
-                        else {
-                          //  throw std::runtime_error("Page access failed after retries for page " + std::to_string(globalPage));
-                            idleCpuTicks++;
-                        }
-                    }
-                    else {
-                        throw std::runtime_error("Invalid page index: " + std::to_string(pageLocal) +
-                            " for process with " + std::to_string(assignedPages.size()) + " pages");
-
+                // Ensure page loaded
+                const auto& pages = process->getAssignedPages();
+                if (!pages.empty()) {
+                    int pg = pages[process->getCurrentInstructionIndex() / frameSize];
+                    bool ok = memoryManager.accessPage(pg);
+                    if (!ok) {
+                        if (!memoryManager.pageFault(pg))
+                            break;  // unable to fault in
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
                 }
-                else {
-                    throw std::runtime_error("Process has no assigned pages");
-                }
+
+                process->executeNextInstruction();
+                ++instructionsExecuted;
+                if (process->getIsSleeping())
+                    break;
+                if (delays_per_exec > 0)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
             }
-
-            // Check if process finished
-            processFinished = process->getCurrentInstructionIndex() >= process->getInstructionCount();
+            requeueProcess = process->getCurrentInstructionIndex() >= process->getInstructionCount();
         }
-        catch (const std::exception& e) {
-           // std::cerr << "[ERROR] Error executing process " << process->getId() << ": " << e.what() << std::endl;
+        catch (...) {
             processFinished = true;
             requeueProcess = false;
+        }
+
+        if (process->getIsSleeping()) {
+            std::lock_guard<std::mutex> lg(queueMutex);
+            coreAvailable[coreId] = true;
+            sleepingProcesses.push_back(process);
+            cv.notify_all();
+            continue;
         }
 
         // Handle process completion
         if (processFinished) {
             {
-                std::lock_guard<std::mutex> lock(queueMutex);
+                std::lock_guard<std::mutex> lg(queueMutex);
                 process->setIsFinished(true);
                 processHandler.markProcessFinished(process->getId());
-
-                // Release all process pages when finished
-                try {
-                    memoryManager.releaseProcessPages(process->getId());
-                   // std::cout << "[INFO] Process " << process->getId() << " completed - pages released for reuse" << std::endl;
-                }
-                catch (const std::exception& e) {
-                    std::cerr << "[ERROR] Failed to release pages for process " << process->getId()
-                        << ": " << e.what() << std::endl;
-                }
+                memoryManager.releaseProcessPages(process->getId());
                 requeueProcess = false;
             }
         }
@@ -248,17 +229,16 @@ void RRScheduler::workerLoop(int coreId) {
             readyQueue.push(process);
         }
 
-        // Mark core as available
         {
             std::lock_guard<std::mutex> lock(queueMutex);
             coreAvailable[coreId] = true;
         }
 
-        // Pass turn to next core
         {
             std::lock_guard<std::mutex> turnLock(coreTurnMutex);
             nextCoreId = (nextCoreId + 1) % coreAvailable.size();
-            cv.notify_all();
+           
         }
+        cv.notify_all();
     }
 }

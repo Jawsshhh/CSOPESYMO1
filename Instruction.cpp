@@ -18,8 +18,12 @@ Instruction::InstructionType Instruction::getInstructionType()
 void Instruction::execute() {
 }
 
+std::string Instruction::getDetails() const{
+	return "";
+}
+
 /*
-* PRINT INSTRUCTION:
+* PRINT INSTRUCTION: display an output “msg” to the console. The output can only be seen when the user is inside its attached screen.
 */
 
 PrintInstruction::PrintInstruction(Process* process, const std::string& toPrint)
@@ -135,7 +139,7 @@ void AddInstruction::add()
 }
 
 /*
-* SUBTRACT INSTRUCTION:
+* SUBTRACT INSTRUCTION: performs a subtraction operation: var1 = var2/value - var3/valu
 */
 
 SubtractInstruction::SubtractInstruction(Process* process, const std::string& var1,
@@ -190,11 +194,11 @@ std::string SubtractInstruction::getDetails() const {
 }
 
 /*
-* SLEEP INSTRUCTION
+* SLEEP INSTRUCTION: sleeps the current process for X (uint8) CPU ticks and relinquishes the CPU
 */
 
 SleepInstruction::SleepInstruction(Process* process, std::string sleepCycles)
-	: Instruction(process, Instruction::InstructionType::SLEEP), sleepCycles(sleepCycles) 
+	: Instruction(process, Instruction::InstructionType::SLEEP), sleepCycles(sleepCycles)
 {
 }
 
@@ -206,27 +210,86 @@ void SleepInstruction::execute()
 void SleepInstruction::sleep()
 {
 	uint8_t sC = static_cast<uint8_t>(std::stoi(sleepCycles));
+	
 	process->setIsSleeping(true, sC);
 }
 
 std::string SleepInstruction::getDetails() const {
-	return "[INITIALIZE] SLEEP for " + std::to_string(process->getRemainingSleepCycles()) + " cycles";
+	return "[START] SLEEP for " + sleepCycles + " cycles";
 }
 
 /*
-* FOR INSTRUCTION
+* FOR INSTRUCTION: performs a for-loop, given a set/array of instructions. Can be nested.
 */
 
-ForInstruction::ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats) 
-	: Instruction(process, Instruction::InstructionType::FOR), repeats(repeats)
+ForInstruction::ForInstruction(Process* process, const std::vector<std::shared_ptr<Instruction>>& instructionList, int repeatCount)
+	: Instruction(process, Instruction::InstructionType::FOR), instructionList(instructionList),
+	repeatCount(repeatCount), currentIteration(0), isExecuting(false), currentInstructionIndex(0)
 {
 }
 
 void ForInstruction::execute()
 {
-	if (repeats <= 3) {
+	if (!isExecuting) {
+		isExecuting = true;
+		currentIteration = 0;
+		currentInstructionIndex = 0;
 
+		if (instructionList.empty() || repeatCount <= 0) {
+			isExecuting = false;
+			return;
+		}
 	}
+
+	if (!executeNextInLoop()) {
+		isExecuting = false;
+	}
+}
+
+bool ForInstruction::executeNextInLoop() {
+	if (currentIteration >= repeatCount) {
+		return false;
+	}
+
+	if (currentInstructionIndex >= instructionList.size()) {
+		currentIteration++;
+		currentInstructionIndex = 0;
+
+		if (currentIteration >= repeatCount) {
+			return false;
+		}
+	}
+
+	if (currentInstructionIndex < instructionList.size()) {
+		auto instruction = instructionList[currentInstructionIndex];
+		instruction->execute();
+		process->logInstruction(
+			process->instructionTypeToString(instruction->getInstructionType()),
+			"INSIDE FOR LOOP:" + instruction->getDetails()
+		);
+		currentInstructionIndex++;
+
+		return true;
+	}
+
+	return false;
+}
+
+bool ForInstruction::isLoopComplete() const {
+	return !isExecuting && currentIteration >= repeatCount;
+}
+
+void ForInstruction::resetLoop() {
+	currentIteration = 0;
+	currentInstructionIndex = 0;
+	isExecuting = false;
+}
+
+std::string ForInstruction::getDetails() const {
+	return "FOR LOOP: iteration " + std::to_string(currentIteration + 1) +
+		"/" + std::to_string(repeatCount) +
+		", instruction " + std::to_string(currentInstructionIndex + 1) +
+		"/" + std::to_string(instructionList.size());
 }
 
 /*

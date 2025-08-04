@@ -30,6 +30,8 @@ private:
     std::mutex snapshotMutex;
     int globalPageCounter = 0;
 
+    std::vector<std::shared_ptr<Process>> sleepingProcesses;
+
     std::queue<std::shared_ptr<Process>> pendingProcesses;  // ADD THIS LINE
 
 };

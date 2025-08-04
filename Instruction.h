@@ -25,7 +25,7 @@ public:
 
     InstructionType getInstructionType();
     virtual void execute();
-    virtual std::string getDetails() const = 0;
+    virtual std::string getDetails() const;
 
 
 protected:
@@ -135,9 +135,17 @@ private:
 
 class ForInstruction : public Instruction {
 public:
-    ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats);
+    ForInstruction(Process* process, const std::vector<std::shared_ptr<Instruction>>& instructionList, int repeatCount);
     void execute() override;
+    bool executeNextInLoop();
+    bool isLoopComplete() const;
+    void resetLoop();
+    std::string getDetails() const override;
+
 private:
-    std::vector<Instruction> instructionList;
-    int repeats;
+    std::vector<std::shared_ptr<Instruction>> instructionList;
+    int repeatCount;
+    int currentIteration;
+    bool isExecuting;
+    int currentInstructionIndex;
 };

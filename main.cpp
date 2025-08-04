@@ -225,6 +225,89 @@ bool ConsoleManager::memorySizeCheck(const size_t memorySize) {
     return false;
 }
 
+std::shared_ptr<Instruction> parseInstruction(const std::string& instrLine, Process* process) {
+    std::istringstream tokens(instrLine);
+    std::string type;
+    tokens >> type;
+
+    if (type == "PRINT") {
+        std::string message;
+        std::getline(tokens, message);
+        message = trim(message);
+        return std::make_shared<PrintInstruction>(process, message);
+    }
+    else if (type == "DECLARE") {
+        std::string var;
+        uint16_t val;
+        tokens >> var >> val;
+        return std::make_shared<DeclareInstruction>(process, var, val);
+    }
+    else if (type == "ADD") {
+        std::string dest, src1, src2;
+        tokens >> dest >> src1 >> src2;
+        return std::make_shared<AddInstruction>(process, dest, src1, src2);
+    }
+    else if (type == "SUBTRACT") {
+        std::string dest, src1, src2;
+        tokens >> dest >> src1 >> src2;
+        return std::make_shared<SubtractInstruction>(process, dest, src1, src2);
+    }
+    else if (type == "SLEEP") {
+        std::string sleepCycles;
+        tokens >> sleepCycles;
+        return std::make_shared<SleepInstruction>(process, sleepCycles);
+    }
+    else if (type == "READ") {
+        std::string var, address;
+        tokens >> var >> address;
+        return std::make_shared<ReadInstruction>(process, var, address);
+    }
+    else if (type == "WRITE") {
+        std::string address, value;
+        tokens >> address >> value;
+        return std::make_shared<WriteInstruction>(process, address, value);
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<ForInstruction> parseForInstruction(const std::string& forLine, Process* process) {
+   
+    size_t startBracket = forLine.find('[');
+    size_t endBracket = forLine.find(']');
+    size_t repeatPos = forLine.find("REPEAT");
+
+    if (startBracket == std::string::npos || endBracket == std::string::npos ||
+        repeatPos == std::string::npos || repeatPos <= endBracket) {
+        return nullptr; // Invalid format
+    }
+
+   
+    std::string instructionsStr = forLine.substr(startBracket + 1, endBracket - startBracket - 1);
+    instructionsStr = trim(instructionsStr);
+
+    
+    std::string repeatStr = forLine.substr(repeatPos + 6); // Skip "REPEAT"
+    repeatStr = trim(repeatStr);
+    int repeatCount = std::stoi(repeatStr);
+
+    std::vector<std::shared_ptr<Instruction>> instructions;
+    std::istringstream iss(instructionsStr);
+    std::string instr;
+
+    while (std::getline(iss, instr, ';')) {
+        instr = trim(instr);
+        if (!instr.empty()) {
+            auto parsedInstr = parseInstruction(instr, process);
+            if (parsedInstr) {
+                instructions.push_back(parsedInstr);
+            }
+        }
+    }
+
+    return std::make_shared<ForInstruction>(process, instructions, repeatCount);
+}
+
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
     static int processCounter = 0;  // Counter for unique process names
 
@@ -243,7 +326,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 5;   
+            int instructionType = rand() % 7;   
             switch (instructionType) {
                 case 0: {
                     auto printInstr = make_shared<PrintInstruction>(
@@ -303,6 +386,42 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                     break;
                 }
                 case 5: {
+                    /*std::string varName = "readVar" + std::to_string(rand() % 5);
+                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
+                    auto readInstr = make_shared<ReadInstruction>(
+                        process.get(), varName, address);
+                    process->addInstruction(readInstr);*/
+                    break;
+                }
+                case 6: {
+                    std::vector<std::shared_ptr<Instruction>> nestedInstructions;
+
+                    // Add 2-3 simple instructions to the FOR loop
+                    int nestedCount = 2 + (rand() % 2);
+                    for (int k = 0; k < nestedCount; k++) {
+                        int nestedType = rand() % 3;
+                        if (nestedType == 0) {
+                            nestedInstructions.push_back(
+                                std::make_shared<PrintInstruction>(
+                                    process.get(), "Loop iteration"));
+                        }
+                        else if (nestedType == 1) {
+                            std::string var = "loopVar" + std::to_string(k);
+                            nestedInstructions.push_back(
+                                std::make_shared<DeclareInstruction>(
+                                    process.get(), var, rand() % 10));
+                        }
+                        else {
+                            nestedInstructions.push_back(
+                                std::make_shared<SleepInstruction>(
+                                    process.get(), "1"));
+                        }
+                    }
+
+                    int repeatCount = 2 + (rand() % 4); // 2-5 repetitions
+                    auto forInstr = make_shared<ForInstruction>(
+                        process.get(), nestedInstructions, repeatCount);
+                    process->addInstruction(forInstr);
                     break;
                 }
             }
@@ -317,14 +436,13 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
             }
         }
 
-        // Wait for the configured delay or until stopped
+        
         unique_lock<mutex> lock(config.populate_mutex);
         config.populate_cv.wait_for(lock,
             chrono::milliseconds(config.batch_process_freq),
             [&config] { return !config.populate_running; });
     }
 }
-
 
 int main() {
     Config config;
@@ -526,10 +644,8 @@ int main() {
 
                     if (type == "PRINT") {
                         std::string message;
-                        std::getline(tokens, message);  // take remaining part as message
+                        std::getline(tokens, message); 
                         message = trim(message);
-
-                       // cout << message;
 
                         auto printInstr = make_shared<PrintInstruction>(process.get(), message);
                         process->addInstruction(printInstr);
@@ -538,10 +654,6 @@ int main() {
                         std::string var;
                         uint16_t val;
                         tokens >> var >> val;
-
-                        /*cout << var << "\n";
-                        cout << val << "\n";*/
-                        //process->addInstruction(make_shared<DeclareInstruction>(process.get(), var, val));
 
                         auto declareInstr = make_shared<DeclareInstruction>(process.get(), var, val);
                         process->addInstruction(declareInstr);
@@ -569,7 +681,27 @@ int main() {
                         process->addInstruction(sleepInstr);
                     }
                     else if (type == "FOR") {
-                        
+                        std::string fullForInstruction = instrLine;
+
+                        // If this doesn't contain REPEAT, we need to look ahead
+                        size_t repeatPos = fullForInstruction.find("REPEAT");
+                        if (repeatPos == std::string::npos) {
+                            // Look ahead to find the complete FOR instruction
+                            while (std::getline(iss, instr, ';')) {
+                                fullForInstruction += "; " + trim(instr);
+                                if (instr.find("REPEAT") != std::string::npos) {
+                                    break;
+                                }
+                            }
+                        }
+
+                        auto forInstr = parseForInstruction(fullForInstruction, process.get());
+                        if (forInstr) {
+                            process->addInstruction(forInstr);
+                        }
+                        else {
+                            std::cout << "Invalid FOR instruction format: " << fullForInstruction << "\n";
+                        }
                     }
                     else if (type == "READ") {
                         std::string var, address;
@@ -732,7 +864,7 @@ int main() {
                 std::cout << "Error: Scheduler not initialized.\n";
             }
             else {
-                scheduler->generateReport("csopesy.txt");
+                scheduler->generateReport("csopesy-log.txt");
             }
         }
         else if (inputCommand == "screen -ls") {

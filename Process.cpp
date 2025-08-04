@@ -47,17 +47,18 @@ void Process::assignPages(const std::vector<int>& pages) {
 }
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
-    time_t now = time(nullptr);
-    tm local;
-    localtime_s(&local, &now);
-    std::stringstream ss;
-    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+    if (type == "PRINT") {
+        time_t now = time(nullptr);
+        tm local;
+        localtime_s(&local, &now);
+        std::stringstream ss;
+        ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
 
-    std::lock_guard<std::mutex> lock(fileMutex);
-    logFile << "(" << ss.str() << ") Core:" << assignedCore
-        << " \"" << details << "\"\n";
-    logFile.flush();
-
+        std::lock_guard<std::mutex> lock(fileMutex);
+        logFile << "(" << ss.str() << ") Core:" << assignedCore
+            << " \"" << details << "\"\n";
+        logFile.flush();
+    }
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
@@ -114,24 +115,82 @@ bool Process::canAddVariable() const {
     return symbolTable.getSymbolTable().size() < SYMBOL_TABLE_MAX_SIZE;
 }
 
+void Process::setCurrentForLoop(std::shared_ptr<ForInstruction> forLoop) {
+    currentForLoop = forLoop;
+    isInForLoop = true;
+}
+
+void Process::clearForLoop() {
+    currentForLoop.reset();
+    isInForLoop = false;
+}
+
+std::string Process::timestamp() const {
+    time_t now = time(nullptr);
+    tm local;
+    localtime_s(&local, &now);
+    std::stringstream ss;
+    ss << std::put_time(&local, "%H:%M:%S");
+    return ss.str();
+}
+
+bool Process::shouldWakeUp() const
+{
+    return isSleeping && remainingSleepCycles == 0;
+}
+
 bool Process::executeNextInstruction() {
     if (hasMemoryViolation) {
         return false;
     }
 
     if (isSleeping) {
-        logInstruction("SLEEP", "SLEEP FOR " + std::to_string(remainingSleepCycles) + " CYCLES");
-        remainingSleepCycles--;
+        
+        logInstruction(
+            "SLEEP-TICK",
+            "Sleeping, " + std::to_string(remainingSleepCycles) + " cycles remaining"
+        );
 
-        if (remainingSleepCycles <= 0) {
-            isSleeping = false;
+        --remainingSleepCycles;
+        if (remainingSleepCycles > 0) {
+            return true;  
         }
 
+        isSleeping = false;
+        logInstruction("WAKE", "Woke up after sleep");
         return true;
     }
 
+    if (isInForLoop && currentForLoop) {
+        currentForLoop->execute();
+
+        logInstruction("FOR", currentForLoop->getDetails());
+
+        if (currentForLoop->isLoopComplete()) {
+            clearForLoop();
+            currentInstruction++; 
+        }
+
+        return currentInstruction < static_cast<int>(instructionList.size()) || isInForLoop;
+    }
+
+
     if (currentInstruction < static_cast<int>(instructionList.size())) {
         auto instr = instructionList[currentInstruction++];
+
+        if (instr->getInstructionType() == Instruction::InstructionType::FOR) {
+            auto forInstr = std::dynamic_pointer_cast<ForInstruction>(instr);
+            if (forInstr) {
+                setCurrentForLoop(forInstr);
+                forInstr->execute();
+
+                logInstruction("FOR", "[INSIDE FOR LOOP] " + forInstr->getDetails());
+
+                return true;
+            }
+        }
+
+        currentInstruction++;
 
         if (instr->getInstructionType() == Instruction::InstructionType::DECLARE) {
             if (!canAddVariable()) {
@@ -198,3 +257,5 @@ std::unordered_map<size_t, uint16_t>& Process::getMemoryMap() { return memoryMap
 bool Process::hasMemoryAccessViolation() const { return hasMemoryViolation; }
 size_t Process::getBaseMemoryAddress() const { return baseMemoryAddress; }
 void Process::setBaseMemoryAddress(size_t address) { baseMemoryAddress = address; }
+bool Process::getIsInForLoop() const { return isInForLoop; }
+std::shared_ptr<ForInstruction> Process::getCurrentForLoop() const { return currentForLoop; }
