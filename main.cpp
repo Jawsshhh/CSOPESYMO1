@@ -236,7 +236,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 5;
+            int instructionType = rand() % 5;   
             switch (instructionType) {
                 case 0: {
                     auto printInstr = make_shared<PrintInstruction>(
@@ -298,7 +298,6 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 case 5: {
                     break;
                 }
-            
             }
         }
 
@@ -416,15 +415,17 @@ int main() {
                 auto process = make_shared<Process>(name, processId++, memorySize);   
 
                 // Adds process to scheduler
-               /* try {
+               
+
+                consoleManager.addNewScreen(name, process, memorySize);
+                consoleManager.initializeScreen();
+
+                try {
                     scheduler->addProcess(process);
                 }
                 catch (const exception&) {
 
-                }*/
-
-                consoleManager.addNewScreen(name, process, memorySize);
-                consoleManager.initializeScreen();
+                }
 
                 string subCommand;
                 while (getline(cin, subCommand)) {
@@ -500,9 +501,9 @@ int main() {
             else {
                 /*cout << "Doing something\n";*/
                 static int processId = 0;
-                size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
+                // size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
-                auto process = make_shared<Process>(name, processId++, mem_per_proc);
+                auto process = make_shared<Process>(name, processId++, memorySize);
 
                 // Parse Instructions
                 for (const auto& instrLine : instructionList) {
@@ -568,10 +569,19 @@ int main() {
                     }
                 }
 
-
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
 
+                // Add to scheduler
+                try {
+                    scheduler->addProcess(process);
+                }
+                catch (const exception&) {
+
+                }
+
+                
+                
                 // subCommands etc etc
                 string subCommand;
                 while (getline(cin, subCommand)) {

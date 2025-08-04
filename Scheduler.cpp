@@ -145,7 +145,7 @@ void Scheduler::displayProcessSmi() {
     int memUtilPercent = static_cast<int>((static_cast<float>(usedMem) / totalMem) * 100);
 
     // ==== Print ====
-    std::cout << "\n========= Process-smi ==========\n";
+    std::cout << "\n=============== Process-smi ==============\n";
     std::cout << "CPU Util: " << cpuUtilization << "%\n";
     std::cout << "Memory Usage: " << usedMem << " MiB / " << static_cast<int>(totalMem) << " MiB\n";
     std::cout << "Memory Util: " << memUtilPercent << "%\n";

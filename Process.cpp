@@ -134,6 +134,7 @@ std::vector<std::string> Process::getLogs() const {
     while (std::getline(logFile, line)) {
         logs.push_back(line);
     }
+    return logs;
 }
 
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
