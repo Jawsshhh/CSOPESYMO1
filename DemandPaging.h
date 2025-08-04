@@ -26,6 +26,10 @@ public:
     size_t getFrameSize() const;
     int getNextGlobalPageId();
 
+    long long getPagesIn() const;
+    long long getPagesOut() const;
+
+
 
 private:
     struct Frame {
@@ -51,6 +55,10 @@ private:
     std::unordered_map<int, PageTableEntry> globalPageTable;
     std::unordered_map<int, std::vector<int>> processPageMap;
     std::queue<int> reusablePageIds;
+
+    std::atomic<long long> pagesIn{ 0 };
+    std::atomic<long long> pagesOut{ 0 };
+
 
     mutable std::mutex memoryMutex;
     mutable std::mutex backingStoreMutex;

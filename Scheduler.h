@@ -39,6 +39,11 @@ protected:
     std::vector<std::string> lastPrintedProcessLines;
     DemandPagingAllocator memoryManager;
 
+    // CPU tick tracking - ADD THESE LINES
+    std::atomic<long long> totalCpuTicks{ 0 };
+    std::atomic<long long> idleCpuTicks{ 0 };
+    std::atomic<long long> activeCpuTicks{ 0 };
+
     virtual void schedulerLoop() = 0;
     virtual void workerLoop(int coreId) = 0;
     int findAvailableCore() {

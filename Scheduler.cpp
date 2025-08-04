@@ -161,17 +161,28 @@ void Scheduler::displayProcessSmi() {
 }
 
 void Scheduler::displayVMStat() {
-
+    // Memory statistics
     size_t totalMemory = memoryManager.getUsedMemory() + memoryManager.getFreeMemory();
+    size_t usedMemory = memoryManager.getUsedMemory();
+    size_t freeMemory = memoryManager.getFreeMemory();
+
+    // CPU statistics
+    long long totalTicks = totalCpuTicks.load();
+    long long idleTicks = idleCpuTicks.load();
+    long long activeTicks = activeCpuTicks.load();
+
+    // Paging statistics
+    long long pagedIn = memoryManager.getPagesIn();
+    long long pagedOut = memoryManager.getPagesOut();
 
     std::cout << "\n============ vmstat ============\n";
-    std::cout << "Total Memory: " << totalMemory << " B \n";
-    std::cout << "Used Memory: " << memoryManager.getUsedMemory() << " B \n";
-    std::cout << "Free Memory: " << memoryManager.getFreeMemory() << " B \n";
-    std::cout << "Idle CPU ticks: " << " \n";
-    std::cout << "Active CPU ticks: " << " \n";
-    std::cout << "Total CPU ticks: " << " \n";
-    std::cout << "Num paged in: " << " \n";
-    std::cout << "Num paged out: " << " \n";
+    std::cout << "Total Memory: " << totalMemory << " B\n";
+    std::cout << "Used Memory: " << usedMemory << " B\n";
+    std::cout << "Free Memory: " << freeMemory << " B\n";
+    std::cout << "Idle CPU ticks: " << idleTicks << "\n";
+    std::cout << "Active CPU ticks: " << activeTicks << "\n";
+    std::cout << "Total CPU ticks: " << totalTicks << "\n";
+    std::cout << "Num paged in: " << pagedIn << "\n";
+    std::cout << "Num paged out: " << pagedOut << "\n";
     std::cout << "==================================\n";
 }

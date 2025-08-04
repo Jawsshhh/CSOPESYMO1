@@ -62,6 +62,10 @@ bool DemandPagingAllocator::pageFault(int page) {
     // Load the requested page
     bool success = loadPage(page, frameIdx);
 
+    if (success) {
+        pagesIn++; // ADD THIS LINE - Increment pages in counter
+    }
+
     // Log the page fault operation
     logPageOperation(page, success ? "FAULT_SUCCESS" : "FAULT_FAILED", success);
 
@@ -112,10 +116,12 @@ void DemandPagingAllocator::evict(int frameIdx) {
 
         if (writeSuccess) {
             entry.dirty = false; // Mark as clean after successful write
+            pagesOut++;
         }
     }
     else {
         logPageOperation(page, "EVICT_CLEAN");
+        pagesOut++;
     }
 
     // Clear the frame
@@ -424,5 +430,13 @@ void DemandPagingAllocator::releasePageInternal(int pageId) {
 void DemandPagingAllocator::releasePage(int pageId) {
     std::lock_guard<std::mutex> lock(memoryMutex);
     releasePageInternal(pageId);
+}
+
+long long DemandPagingAllocator::getPagesIn() const {
+    return pagesIn.load();
+}
+
+long long DemandPagingAllocator::getPagesOut() const {
+    return pagesOut.load();
 }
 

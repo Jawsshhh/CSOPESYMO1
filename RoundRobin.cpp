@@ -116,6 +116,7 @@ void RRScheduler::schedulerLoop() {
 
 void RRScheduler::workerLoop(int coreId) {
     while (running) {
+        totalCpuTicks++;
         std::shared_ptr<Process> process = nullptr;
 
         // Wait for this core's turn
@@ -130,6 +131,7 @@ void RRScheduler::workerLoop(int coreId) {
             if (!gotTurn) {
                 nextCoreId = (nextCoreId + 1) % coreAvailable.size();
                 cv.notify_all();
+                idleCpuTicks++;
                 continue;
             }
         }
@@ -153,6 +155,7 @@ void RRScheduler::workerLoop(int coreId) {
             std::lock_guard<std::mutex> turnLock(coreTurnMutex);
             nextCoreId = (nextCoreId + 1) % coreAvailable.size();
             cv.notify_all();
+            idleCpuTicks++;
             continue;
         }
 
@@ -165,6 +168,7 @@ void RRScheduler::workerLoop(int coreId) {
             // Execute for quantum cycles or until process finishes
             while (instructionsExecuted < quantum &&
                 process->getCurrentInstructionIndex() < process->getInstructionCount()) {
+                activeCpuTicks++;
 
                 const auto& assignedPages = process->getAssignedPages();
                 if (!assignedPages.empty()) {
@@ -195,11 +199,13 @@ void RRScheduler::workerLoop(int coreId) {
                         }
                         else {
                           //  throw std::runtime_error("Page access failed after retries for page " + std::to_string(globalPage));
+                            idleCpuTicks++;
                         }
                     }
                     else {
                         throw std::runtime_error("Invalid page index: " + std::to_string(pageLocal) +
                             " for process with " + std::to_string(assignedPages.size()) + " pages");
+
                     }
                 }
                 else {
