@@ -46,64 +46,6 @@ void Process::assignPages(const std::vector<int>& pages) {
     }
 }
 
-const std::vector<int>& Process::getAssignedPages() const {
-    return assignedPages;
-}
-
-std::chrono::system_clock::time_point Process::getStartTime() const
-{
-    return std::chrono::system_clock::time_point();
-}
-
-
-bool Process::executeNextInstruction() {
-    if (isSleeping) {
-        logInstruction("SLEEP", "SLEEP FOR " + std::to_string(remainingSleepCycles) + " CYCLES");
-        remainingSleepCycles--;
-
-        if (remainingSleepCycles <= 0) {
-            isSleeping = false;
-        }
-
-        return false;
-    }
-
-    if (currentInstruction < static_cast<int>(instructionList.size())) {
-
-        auto instr = instructionList[currentInstruction++];
-
-        instr->execute();
-
-        logInstruction(
-            instructionTypeToString(instr->getInstructionType()),
-            instr->getDetails()
-        );
-
-        return true;
-
-    }
-
-    if (currentInstruction >= static_cast<int>(instructionList.size())) {
-        isFinished = true;
-        return false;
-    }
-
-    return true;
-}
-
-std::string Process::getName() const { return name; }
-int Process::getId() const { return id; }
-std::string Process::getCreationTime() const { return creationTime; }
-int Process::getCurrentInstructionIndex() const { return currentInstruction; }
-size_t Process::getInstructionCount() const { return instructionList.size(); }
-size_t Process::getMemoryNeeded() const { return memoryRequired; }
-
-void Process::setAssignedCore(int core) { assignedCore = core; }
-int Process::getAssignedCore() const { return assignedCore; }
-
-void Process::setMaxExecutionDelay(int delay) { maxExecDelay = std::max(0, delay); }
-SymbolTable& Process::getSymbolTable() { return symbolTable; }
-
 void Process::logInstruction(const std::string& type, const std::string& details) {
     time_t now = time(nullptr);
     tm local;
@@ -137,6 +79,89 @@ std::vector<std::string> Process::getLogs() const {
     return logs;
 }
 
+void Process::setMemoryAccessViolation(bool violation, const std::string& address) {
+    hasMemoryViolation = violation;
+    violationAddress = address;
+
+    if (violation) {
+        time_t now = time(nullptr);
+        tm local;
+        localtime_s(&local, &now);
+        std::stringstream ss;
+        ss << std::put_time(&local, "%H:%M:%S");
+        violationTime = ss.str();
+
+        setIsFinished(true);
+
+        std::lock_guard<std::mutex> lock(fileMutex);
+        if (logFile.is_open()) {
+            logFile << "[MEMORY VIOLATION] Process terminated due to invalid memory access at "
+                << violationTime << ". Address " << address << " invalid.\n";
+            logFile.flush();
+        }
+    }
+}
+
+std::string Process::getMemoryViolationDetails() const {
+    if (hasMemoryViolation) {
+        return "Process " + name + " shut down due to memory access violation error that occurred at "
+            + violationTime + ". " + violationAddress + " invalid.";
+    }
+    return "";
+}
+
+bool Process::canAddVariable() const {
+    return symbolTable.getSymbolTable().size() < SYMBOL_TABLE_MAX_SIZE;
+}
+
+bool Process::executeNextInstruction() {
+    if (hasMemoryViolation) {
+        return false;
+    }
+
+    if (isSleeping) {
+        logInstruction("SLEEP", "SLEEP FOR " + std::to_string(remainingSleepCycles) + " CYCLES");
+        remainingSleepCycles--;
+
+        if (remainingSleepCycles <= 0) {
+            isSleeping = false;
+        }
+
+        return true;
+    }
+
+    if (currentInstruction < static_cast<int>(instructionList.size())) {
+        auto instr = instructionList[currentInstruction++];
+
+        if (instr->getInstructionType() == Instruction::InstructionType::DECLARE) {
+            if (!canAddVariable()) {
+                logInstruction("DECLARE", "IGNORED - Symbol table full (32 variables max)");
+                return currentInstruction < static_cast<int>(instructionList.size());
+            }
+        }
+
+        instr->execute();
+
+        if (hasMemoryViolation) {
+            return false;
+        }
+
+        logInstruction(
+            instructionTypeToString(instr->getInstructionType()),
+            instr->getDetails()
+        );
+
+        return currentInstruction < static_cast<int>(instructionList.size());
+    }
+
+    if (currentInstruction >= static_cast<int>(instructionList.size())) {
+        isFinished = true;
+        return false;
+    }
+
+    return true;
+}
+
 std::string Process::instructionTypeToString(Instruction::InstructionType type) {
     switch (type) {
     case Instruction::InstructionType::PRINT:    return "PRINT";
@@ -149,36 +174,27 @@ std::string Process::instructionTypeToString(Instruction::InstructionType type) 
     }
 }
 
+const std::vector<int>& Process::getAssignedPages() const { return assignedPages; }
+std::chrono::system_clock::time_point Process::getStartTime() const { return std::chrono::system_clock::time_point(); }
 void Process::setIsSleeping(bool isSleeping, uint8_t sleepCycles)
-{
-    this->isSleeping = isSleeping;
-    this->remainingSleepCycles = sleepCycles;
-}
-
+{ this->isSleeping = isSleeping; this->remainingSleepCycles = sleepCycles; }
 void Process::setIsFinished(bool isFinished)
-{
-
-    std::lock_guard<std::mutex> lock(stateMutex);
-    this->isFinished = isFinished;
-}
-
-
-
-
-
-int Process::getIsSleeping() const {
-    return isSleeping;
-}
-
-int Process::getIsFinished() const {
-    return isFinished;
-}
-
-int Process::getRemainingSleepCycles() const
-{
-    return remainingSleepCycles;
-}
-
-int Process::getMemorySize() const {
-    return memorySize;
-}
+{ std::lock_guard<std::mutex> lock(stateMutex); this->isFinished = isFinished; }
+int Process::getIsSleeping() const { return isSleeping; }
+int Process::getIsFinished() const { return isFinished; }
+int Process::getRemainingSleepCycles() const { return remainingSleepCycles; }
+int Process::getMemorySize() const { return memorySize; }
+std::string Process::getName() const { return name; }
+int Process::getId() const { return id; }
+std::string Process::getCreationTime() const { return creationTime; }
+int Process::getCurrentInstructionIndex() const { return currentInstruction; }
+size_t Process::getInstructionCount() const { return instructionList.size(); }
+size_t Process::getMemoryNeeded() const { return memoryRequired; }
+void Process::setAssignedCore(int core) { assignedCore = core; }
+int Process::getAssignedCore() const { return assignedCore; }
+void Process::setMaxExecutionDelay(int delay) { maxExecDelay = std::max(0, delay); }
+SymbolTable& Process::getSymbolTable() { return symbolTable; }
+std::unordered_map<size_t, uint16_t>& Process::getMemoryMap() { return memoryMap; }
+bool Process::hasMemoryAccessViolation() const { return hasMemoryViolation; }
+size_t Process::getBaseMemoryAddress() const { return baseMemoryAddress; }
+void Process::setBaseMemoryAddress(size_t address) { baseMemoryAddress = address; }

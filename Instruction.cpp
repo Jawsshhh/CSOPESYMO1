@@ -18,6 +18,10 @@ Instruction::InstructionType Instruction::getInstructionType()
 void Instruction::execute() {
 }
 
+/*
+* PRINT INSTRUCTION:
+*/
+
 PrintInstruction::PrintInstruction(Process* process, const std::string& toPrint)
 	: Instruction(process, Instruction::InstructionType::PRINT),
 	toPrint(toPrint)
@@ -77,6 +81,7 @@ std::string DeclareInstruction::getDetails() const {
 * ADD INSTRUCTION: performs an addition operation var 1 = var2/value + var3/value
 * var1, var2, var3 are variables. Variables are automatically declared with a value of 0 if they have not been declared beforehand. Can also add a uint16 value.
 */
+
 AddInstruction::AddInstruction(Process* process, const std::string& var1,
 	const std::string& var2, const std::string& var3)
 	: Instruction(process, InstructionType::ADD),
@@ -211,6 +216,7 @@ std::string SleepInstruction::getDetails() const {
 /*
 * FOR INSTRUCTION
 */
+
 ForInstruction::ForInstruction(Process* process, std::vector<Instruction> instructionList, int repeats) 
 	: Instruction(process, Instruction::InstructionType::FOR), repeats(repeats)
 {
@@ -221,6 +227,134 @@ void ForInstruction::execute()
 	if (repeats <= 3) {
 
 	}
+}
+
+/*
+* READ INSTRUCTION
+*/
+ReadInstruction::ReadInstruction(Process* process, const std::string& varName, const std::string& memoryAddress)
+	: Instruction(process, Instruction::InstructionType::READ), varName(varName), memoryAddress(memoryAddress)
+{
+}
+
+void ReadInstruction::execute() {
+	read();
+}
+
+bool ReadInstruction::read() {
+	try {
+		
+		size_t hexAddress = std::stoull(memoryAddress, nullptr, 16);
+
+		if (!isValidMemoryAddress(hexAddress)) {
+			
+			process->setMemoryAccessViolation(true, memoryAddress);
+			return false;
+		}
+
+		uint16_t value = readFromMemoryAddress(hexAddress);
+
+		if (!process->getSymbolTable().checkVarExists(varName)) {
+			DeclareInstruction decl(process, varName, 0);
+			decl.execute();
+		}
+
+		process->getSymbolTable().updateVariable(varName, std::to_string(value));
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		process->setMemoryAccessViolation(true, memoryAddress);
+		return false;
+	}
+}
+
+uint16_t ReadInstruction::readFromMemoryAddress(size_t address) {
+	auto& memoryMap = process->getMemoryMap();
+
+	if (memoryMap.find(address) != memoryMap.end()) {
+		return memoryMap[address];
+	}
+
+	return 0; 
+}
+
+bool ReadInstruction::isValidMemoryAddress(size_t address) {
+	size_t processMemorySize = process->getMemoryNeeded();
+	size_t baseAddress = process->getBaseMemoryAddress();
+
+	return (address >= baseAddress && address < (baseAddress + processMemorySize));
+}
+
+std::string ReadInstruction::getDetails() const {
+	return "READ " + varName + " from address " + memoryAddress;
+}
+/*
+* WRITE INSTRUCTION
+*/
+WriteInstruction::WriteInstruction(Process* process, const std::string& memoryAddress, const std::string& value)
+	: Instruction(process, Instruction::InstructionType::WRITE),
+	memoryAddress(memoryAddress), value(value)
+{
+}
+
+void WriteInstruction::execute() {
+	write();
+}
+
+bool WriteInstruction::write() {
+	try {
+		size_t hexAddress = std::stoull(memoryAddress, nullptr, 16);
+
+		if (!isValidMemoryAddress(hexAddress)) {
+			process->setMemoryAccessViolation(true, memoryAddress);
+			return false;
+		}
+
+		uint16_t writeValue = getValue(value);
+
+		writeToMemoryAddress(hexAddress, writeValue);
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		process->setMemoryAccessViolation(true, memoryAddress);
+		return false;
+	}
+}
+
+uint16_t WriteInstruction::getValue(const std::string& val) {
+	if (checkNumber(val)) {
+		return static_cast<uint16_t>(std::stoi(val));
+	}
+
+	if (process->getSymbolTable().checkVarExists(val)) {
+		return static_cast<uint16_t>(std::stoi(process->getSymbolTable().retrieveValue(val)));
+	}
+
+	DeclareInstruction decl(process, val, 0);
+	decl.execute();
+	return 0;
+}
+
+void WriteInstruction::writeToMemoryAddress(size_t address, uint16_t value) {
+	auto& memoryMap = process->getMemoryMap();
+	memoryMap[address] = value;
+}
+
+bool WriteInstruction::isValidMemoryAddress(size_t address) {
+	size_t processMemorySize = process->getMemoryNeeded();
+	size_t baseAddress = process->getBaseMemoryAddress();
+
+	return (address >= baseAddress && address < (baseAddress + processMemorySize));
+}
+
+bool WriteInstruction::checkNumber(const std::string& val) {
+	return !val.empty() && std::all_of(val.begin(), val.end(), std::isdigit);
+}
+
+std::string WriteInstruction::getDetails() const {
+	return "WRITE " + value + " to address " + memoryAddress;
 }
 
 

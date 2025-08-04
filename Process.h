@@ -30,6 +30,8 @@ public:
     void setAssignedCore(int core);
     void setIsSleeping(bool isSleeping, uint8_t sleepCycles);
     void setIsFinished(bool isFinished);
+    void setMemoryAccessViolation(bool violation, const std::string& address);
+    void setBaseMemoryAddress(size_t address);
 
     SymbolTable& getSymbolTable();
     std::string getName() const;
@@ -43,6 +45,13 @@ public:
     int getIsSleeping() const;
     int getIsFinished() const;
     int getRemainingSleepCycles() const;
+    std::unordered_map<size_t, uint16_t>& getMemoryMap();
+    bool hasMemoryAccessViolation() const;
+    std::string getMemoryViolationDetails() const;
+    size_t getBaseMemoryAddress() const;
+
+    bool canAddVariable() const;
+
     static std::string instructionTypeToString(Instruction::InstructionType type);
 
     void assignPages(const std::vector<int>& pages);
@@ -50,16 +59,23 @@ public:
 
     std::chrono::system_clock::time_point getStartTime() const;
 
+
+
 private:
     SymbolTable symbolTable;
     std::vector<std::shared_ptr<Instruction>> instructionList;
     std::vector<int> assignedPages;
+    std::unordered_map<size_t, uint16_t> memoryMap;
     
     std::string name;
     int id;
     std::string creationTime;
     std::ofstream logFile;
     size_t memoryRequired;
+
+    std::string violationAddress;
+    std::string violationTime;
+    size_t baseMemoryAddress;
 
     int assignedCore = -1;
     int currentInstruction = 0;
@@ -70,8 +86,11 @@ private:
     
     bool isFinished = false;
     bool isSleeping = false;
+    bool hasMemoryViolation = false;
     int remainingSleepCycles = 0;
 
     int delayCount = 0;
     int maxExecDelay = 0;
+
+    static const size_t SYMBOL_TABLE_MAX_SIZE = 32;
 };

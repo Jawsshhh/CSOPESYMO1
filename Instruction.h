@@ -15,7 +15,9 @@ public:
         ADD,
         SUBTRACT,
         SLEEP,
-        FOR
+        FOR,
+        READ,
+        WRITE,
     };
 
     Instruction(Process* process, InstructionType instructionType);
@@ -32,6 +34,39 @@ protected:
     std::vector<std::string> args;              
     std::vector<Instruction> body;              
     int repeatCount = 0;                        
+};
+
+class ReadInstruction : public Instruction {
+public:
+    ReadInstruction(Process* process, const std::string& varName, const std::string& memoryAddress);
+    void execute() override;
+    std::string getDetails() const override;
+    bool read();
+
+private:
+    std::string varName;
+    std::string memoryAddress;
+
+    uint16_t readFromMemoryAddress(size_t address);
+    bool isValidMemoryAddress(size_t address);
+};
+
+class WriteInstruction : public Instruction {
+public:
+    WriteInstruction(Process* process, const std::string& memoryAddress, const std::string& value);
+    void execute() override;
+    std::string getDetails() const override;
+    bool write();
+    uint16_t getValue(const std::string& val);
+    void writeToMemoryAddress(size_t address, uint16_t value);
+    bool isValidMemoryAddress(size_t address);
+    bool checkNumber(const std::string& val);
+
+private:
+    std::string value;
+    std::string memoryAddress;
+
+    uint16_t readFromMemoryAddress(size_t address);
 };
 
 class PrintInstruction : public Instruction {

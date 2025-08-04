@@ -170,13 +170,6 @@ public:
         return false;
     }
 
-    bool memorySizeCheck(const size_t memorySize) {
-        if (memorySize < 64 || memorySize > 65536) {
-            return true;
-        }
-        return false;
-    }
-
     bool instructionSizeCheck(const size_t instructionSize) {
         if (instructionSize < 1 || instructionSize > 50) {
             return true;
@@ -188,6 +181,7 @@ public:
         return currentConsole;
     }
 
+    bool memorySizeCheck(const size_t memorySize);
 
 private:
     map<string, shared_ptr<ConsoleGeneral>> screenSessions;
@@ -204,18 +198,31 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
+bool isPowerOfTwo(size_t n) {
+    return n > 0 && (n & (n - 1)) == 0;
+}
+
 size_t getRandomMemorySize(size_t min_mem, size_t max_mem) {
-    // Calculate number of possible power-of-2 sizes
+
     int min_exp = log2(min_mem);
     int max_exp = log2(max_mem);
     int num_options = max_exp - min_exp + 1;
 
-    // Generate random exponent
     std::uniform_int_distribution<> dist(0, num_options - 1);
     int random_exp = min_exp + dist(gen);
 
-    // Return 2^random_exp
     return static_cast<size_t>(1) << random_exp;
+}
+
+bool ConsoleManager::memorySizeCheck(const size_t memorySize) {
+    if (memorySize < 64 || memorySize > 65536) {
+        return true;
+    }
+    if (!isPowerOfTwo(memorySize)) {
+        return true;
+    }
+
+    return false;
 }
 
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
@@ -317,6 +324,8 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
             [&config] { return !config.populate_running; });
     }
 }
+
+
 int main() {
     Config config;
     string inputCommand;
@@ -407,12 +416,17 @@ int main() {
             else if (consoleManager.memorySizeCheck(memorySize)) {
                 cout << "Invalid memory allocation. Memory size must be between 64 - 65536 bytes. Please try again.\n";
             }
+
+            else if (!isPowerOfTwo(memorySize)) {
+                cout << "Invalid memory allocation. Memory size must be a power of 2. Please try again.\n";
+            }
             
             else {
                 static int processId = 0;
                 //size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
                 auto process = make_shared<Process>(name, processId++, memorySize);   
+                process->setBaseMemoryAddress(0x1000 + (processId * 0x10000));
 
                 // Adds process to scheduler
                
@@ -429,7 +443,6 @@ int main() {
 
                 string subCommand;
                 while (getline(cin, subCommand)) {
-                 //   cout << "Enter command:> ";
                     if (subCommand == "exit") {
                         consoleManager.destroyScreen();
                         consoleManager.switchConsole("MAIN");
@@ -559,10 +572,18 @@ int main() {
                         
                     }
                     else if (type == "READ") {
-                        
+                        std::string var, address;
+                        tokens >> var >> address;
+
+                        auto readInstr = make_shared<ReadInstruction>(process.get(), var, address);
+                        process->addInstruction(readInstr);
                     }
                     else if (type == "WRITE") {
-                        
+                        std::string address, value;
+                        tokens >> address >> value;
+
+                        auto writeInstr = make_shared<WriteInstruction>(process.get(), address, value);
+                        process->addInstruction(writeInstr);
                     }
                     else {
                         std::cout << "Unknown instruction type: " << type << "\n";

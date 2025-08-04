@@ -13,7 +13,14 @@ public:
 
 private:
     void schedulerLoop() override;
-    int delays_per_exec;
     void workerLoop(int coreId) override;
+
+    bool handleMemoryAccess(std::shared_ptr<Process> process);
+    bool allocateMemoryForProcess(std::shared_ptr<Process> process);
+    void deallocateMemoryForProcess(std::shared_ptr<Process> process);
+
+    int delays_per_exec;
     std::queue<std::shared_ptr<Process>> processQueue;
+    std::queue<std::shared_ptr<Process>> waitingQueue;
+    std::mutex waitingQueueMutex;
 };
