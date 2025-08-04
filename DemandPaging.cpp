@@ -62,9 +62,7 @@ bool DemandPagingAllocator::pageFault(int page) {
     // Load the requested page
     bool success = loadPage(page, frameIdx);
 
-    if (success) {
-        pagesIn++; // ADD THIS LINE - Increment pages in counter
-    }
+ 
 
     // Log the page fault operation
     logPageOperation(page, success ? "FAULT_SUCCESS" : "FAULT_FAILED", success);
@@ -153,7 +151,7 @@ bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
 
     // Update frame table
     frameTable[frameIdx] = { page, true };
-
+	pagesIn++;
     return true;
 }
 
@@ -418,6 +416,9 @@ void DemandPagingAllocator::releasePageInternal(int pageId) {
         if (needsWrite) {
             bool writeSuccess = writePageToBackingStore(pageId, pageData);
             logPageOperation(pageId, writeSuccess ? "FINAL_WRITE" : "FINAL_WRITE_FAILED");
+            if (writeSuccess) {
+                pagesOut++;  
+            }
         }
     }
 
