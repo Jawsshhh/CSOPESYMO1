@@ -500,7 +500,7 @@ int main() {
                     << "Minimum process memory: " << config.min_mem_per_proc << "\n"
                     << "Maximum process memory: " << config.max_mem_per_proc << "\n";
 
-                if (config.scheduler == "fcfs") {
+                if (config.scheduler == "\"fcfs\"") {
                     scheduler = std::unique_ptr<Scheduler>(new FCFSScheduler(
                         config.num_cpu,
                         config.max_overall_mem,
@@ -508,7 +508,7 @@ int main() {
                         config.delays_per_exec));
                     scheduler->start();
                 }
-                else if (config.scheduler == "rr") {
+                else if (config.scheduler == "\"rr\"") {
                     scheduler = std::make_unique<RRScheduler>(
                         config.num_cpu,
                         config.quantum_cycles,
