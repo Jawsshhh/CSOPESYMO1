@@ -129,7 +129,7 @@ void Scheduler::generateReport(const std::string& filename) {
 void Scheduler::displayProcessSmi() {
     std::lock_guard<std::mutex> lock(queueMutex);
 
-    auto runningProcs = processHandler.getRunningProcesses();
+    auto runningProcs = processHandler.getCurrentlyActiveProcessesPerCore(numCores);
 
     // CPU Util
     std::unordered_set<int> usedCores;
