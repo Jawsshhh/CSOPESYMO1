@@ -146,7 +146,7 @@ void RRScheduler::workerLoop(int coreId) {
                 // page-in if needed
                 const auto& pages = proc->getAssignedPages();
                 if (!pages.empty()) {
-                    int pg = pages[proc->getCurrentInstructionIndex() / frameSize];
+                    int pg = pages[proc->getCurrentInstructionIndex() % frameSize];
                     while (!memoryManager.accessPage(pg)) {
                         memoryManager.pageFault(pg);
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
