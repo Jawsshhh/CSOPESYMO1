@@ -662,6 +662,9 @@ int main() {
             else if (consoleManager.memorySizeCheck(memorySize)) {
                 cout << "Invalid memory allocation. Memory size must be between 64 - 65536 bytes. Please try again.\n";
             }
+            else if (!isPowerOfTwo(memorySize)) {
+                cout << "Invalid memory allocation. Memory size must be a power of 2. Please try again.\n";
+            }
             else if (consoleManager.instructionSizeCheck(instructionList.size())) {
                 cout << "Invalid command. Number of instructions must be limited to 1 - 50. Please try again.\n";
             }
