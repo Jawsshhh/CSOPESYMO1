@@ -58,15 +58,15 @@ public:
     std::string getDetails() const override;
     bool write();
     uint16_t getValue(const std::string& val);
-    void writeToMemoryAddress(size_t address, uint16_t value);
-    bool isValidMemoryAddress(size_t address);
+    
     bool checkNumber(const std::string& val);
 
 private:
     std::string value;
     std::string memoryAddress;
 
-    uint16_t readFromMemoryAddress(size_t address);
+    void writeToMemoryAddress(size_t address, uint16_t value);
+    bool isValidMemoryAddress(size_t address);
 };
 
 class PrintInstruction : public Instruction {
