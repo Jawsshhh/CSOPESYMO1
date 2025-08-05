@@ -107,6 +107,7 @@ void Scheduler::listProcesses() {
 
 
 void Scheduler::generateReport(const std::string& filename) {
+    listProcesses();
     std::lock_guard<std::mutex> lock(queueMutex);
 
     std::ofstream outputFile(filename);

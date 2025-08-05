@@ -333,7 +333,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 case 0: {
                     auto printInstr = make_shared<PrintInstruction>(
                         process.get(),
-                        "Hello from " + processName
+                        "Hello from " + processName + "!"
                     );
                     process->addInstruction(printInstr);
                     break;
@@ -396,7 +396,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                         if (nestedType == 0) {
                             nestedInstructions.push_back(
                                 std::make_shared<PrintInstruction>(
-                                    process.get(), "Loop iteration"));
+                                    process.get(), "Hello from " + processName + "!"));
                         }
                         else if (nestedType == 1) {
                             std::string var = "loopVar" + std::to_string(k);
@@ -509,7 +509,7 @@ int main() {
                         else if (key == "batch-process-freq") iss >> config.batch_process_freq;
                         else if (key == "min-ins") iss >> config.min_ins;
                         else if (key == "max-ins") iss >> config.max_ins;
-                        else if (key == "delay-per-exec") iss >> config.delays_per_exec;
+                        else if (key == "delays-per-exec") iss >> config.delays_per_exec;
                         else if (key == "max-overall-mem") iss >> config.max_overall_mem;
                         else if (key == "mem-per-frame") iss >> config.mem_per_frame;
                         else if (key == "min-mem-per-proc") iss >> config.min_mem_per_proc;
@@ -600,32 +600,25 @@ int main() {
                 string subCommand;
                 while (getline(cin, subCommand)) {
                     if (subCommand == "exit") {
-                        consoleManager.destroyScreen();
-                        consoleManager.switchConsole("MAIN");
-                        consoleManager.initializeScreen();
-                        break;
+                        // … existing exit logic …
                     }
                     else if (subCommand == "process-smi") {
-                        cout << "Process name: " << process->getName() << "\n";
-                        cout << "ID: " << process->getId() << "\n";
-                        cout << "Messages:\n"; 
-
-                        auto logs = process->getLogs();
-                        for (const auto& log : logs) {
-                            cout << log << "\n";  
+                        // show violation if any
+                        if (process->hasMemoryAccessViolation()) {
+                            cout << process->getMemoryViolationDetails() << "\n";
                         }
-
-                        if (process->getIsFinished()) {
-                            cout << "Finished!\n";
+                        // then show normal logs
+                        cout << "Process name: " << process->getName() << "\n"
+                            << "ID: " << process->getId() << "\n"
+                            << "Messages:\n";
+                        for (const auto& log : process->getLogs()) {
+                            cout << log << "\n";
                         }
-                        else {
-                            cout << "Current instruction: " << process->getCurrentInstructionIndex() + 1
-                                << "/" << process->getInstructionCount() << "\n";
-                        }
-                    }
-                    else if (subCommand == "memory-violation") {
-                        cout << process->getMemoryViolationDetails() << "\n"; 
-                        cout << "Enter command: ";
+                        cout << (process->getIsFinished() ? "Finished!\n"
+                            : "Current instruction: "
+                            + to_string(process->getCurrentInstructionIndex() + 1)
+                            + "/" + to_string(process->getInstructionCount())
+                            ) << "\n";
                     }
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
@@ -820,6 +813,11 @@ int main() {
 
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
+
+            if (process->hasMemoryAccessViolation()) {
+                cout << process->getMemoryViolationDetails() << "\n";
+                continue;
+            }
 
             if (!process || process->getIsFinished()) {
                 cout << "Process " << name << " not found.\n";

@@ -177,7 +177,7 @@ bool FCFSScheduler::handleMemoryAccess(std::shared_ptr<Process> process) {
     bool pageFaultHandled = false;
     int maxRetries = 5;
 
-    for (int retry = 0; retry < maxRetries && !pageFaultHandled; retry++) {
+    while (!memoryManager.pageFault(globalPageId)) {
         pageFaultHandled = memoryManager.pageFault(globalPageId);
 
         if (!pageFaultHandled) {

@@ -58,19 +58,19 @@ void Process::logInstruction(const std::string& type, const std::string& details
     logFile << "(" << ss.str() << ") Core:" << assignedCore
         << " \"" << details << "\"\n";
     logFile.flush();*/
+    if (type == "PRINT") {
+        time_t now = time(nullptr);
+        tm local;
+        localtime_s(&local, &now);
+        std::stringstream ss;
+        ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
 
-    time_t now = time(nullptr);
-    tm local;
-    localtime_s(&local, &now);
-    std::stringstream ss;
-    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+        std::stringstream logEntry;
+        logEntry << "(" << ss.str() << ") Core:" << assignedCore
+            << " \"" << details << "\"";
 
-    std::stringstream logEntry;
-    logEntry << "(" << ss.str() << ") Core:" << assignedCore
-        << " \"" << details << "\"";
-
-    logs.push_back(logEntry.str());
-    
+        logs.push_back(logEntry.str());
+    }
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
