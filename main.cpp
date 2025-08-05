@@ -323,6 +323,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         auto process = make_shared<Process>(processName, processCounter, mem_per_proc);
         consoleManager.addNewScreen(processName, process, mem_per_proc);
+        process->setBaseMemoryAddress(0x1000 + (process->getId() * 0x10000));
 
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
 

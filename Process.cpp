@@ -81,6 +81,8 @@ void Process::logInstruction(const std::string& type, const std::string& details
 
         logs.push_back(logEntry.str());
     }
+   
+    
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
