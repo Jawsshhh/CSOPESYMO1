@@ -270,7 +270,7 @@ bool ForInstruction::executeNextInLoop() {
 		instruction->execute();
 		process->logInstruction(
 			process->instructionTypeToString(instruction->getInstructionType()),
-			"INSIDE FOR LOOP:" + instruction->getDetails()
+			"INSIDE FOR LOOP: " + instruction->getDetails()
 		);
 		currentInstructionIndex++;
 

@@ -47,18 +47,18 @@ void Process::assignPages(const std::vector<int>& pages) {
 }
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
-    if (type == "PRINT") {
-        time_t now = time(nullptr);
-        tm local;
-        localtime_s(&local, &now);
-        std::stringstream ss;
-        ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+   
+    time_t now = time(nullptr);
+    tm local;
+    localtime_s(&local, &now);
+    std::stringstream ss;
+    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
 
-        std::lock_guard<std::mutex> lock(fileMutex);
-        logFile << "(" << ss.str() << ") Core:" << assignedCore
-            << " \"" << details << "\"\n";
-        logFile.flush();
-    }
+    std::lock_guard<std::mutex> lock(fileMutex);
+    logFile << "(" << ss.str() << ") Core:" << assignedCore
+        << " \"" << details << "\"\n";
+    logFile.flush();
+    
 }
 
 void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
