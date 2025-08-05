@@ -63,9 +63,6 @@ public:
     std::chrono::system_clock::time_point getStartTime() const;
     void clearForLoop();
 
-    void logSleepStart(uint8_t cycles);
-
-    void logSleepEnd();
 
     std::string timestamp() const;
 

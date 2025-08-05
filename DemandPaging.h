@@ -14,9 +14,9 @@ public:
     bool accessPage(int page);
     bool pageFault(int page);
 
-    void registerProcessPages(int pid, const std::vector<int>& pages);
     void releaseProcessPages(int pid);
     void releasePageInternal(int pageId);
+	void registerProcessPages(int pid, const std::vector<int>& pages);
     void initializePageData(int page, const std::string& data);
     void generateSnapshot(const std::string& filename, int quantumCycle);
     void releasePage(int pageId);
@@ -73,4 +73,4 @@ private:
     void logPageOperation(int page, const std::string& operation, bool success = true);
 };
 
-#endif // DEMAND_PAGING_H
+#endif 

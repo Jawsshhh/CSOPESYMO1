@@ -77,7 +77,7 @@ void Scheduler::listProcesses() {
 
     for (const auto& process : runningProcs) {
         int pid = process->getId();
-        if (printedProcessIds.count(pid)) continue;  // skip duplicate
+        if (printedProcessIds.count(pid)) continue;  
 
         printedProcessIds.insert(pid);
 
@@ -162,17 +162,14 @@ void Scheduler::displayProcessSmi() {
 }
 
 void Scheduler::displayVMStat() {
-    // Memory statistics
     size_t totalMemory = memoryManager.getUsedMemory() + memoryManager.getFreeMemory();
     size_t usedMemory = memoryManager.getUsedMemory();
     size_t freeMemory = memoryManager.getFreeMemory();
 
-    // CPU statistics
     long long totalTicks = totalCpuTicks.load();
     long long idleTicks = idleCpuTicks.load();
     long long activeTicks = activeCpuTicks.load();
 
-    // Paging statistics
     long long pagedIn = memoryManager.getPagesIn();
     long long pagedOut = memoryManager.getPagesOut();
 

@@ -20,7 +20,6 @@ using namespace std;
 #include "RoundRobin.h"
 #include "CPUTick.h"
 
-// In main.cpp
 struct Config {
     int num_cpu = 0;
     std::string scheduler = "none";
@@ -99,7 +98,7 @@ public:
         setName(name);
         setCurrentLine(currentLine);
         setTotalLines(totalLines);
-        setMemorySize(memorySize); // Sets memory size
+        setMemorySize(memorySize); 
         time_t now = time(nullptr);
         tm local;
         localtime_s(&local, &now);
@@ -327,7 +326,6 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
 
-        // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
             int instructionType = rand() % 8;   
             switch (instructionType) {
@@ -563,7 +561,6 @@ int main() {
                 continue;
             }
 
-            // string name = inputCommand.substr(10);
             std::istringstream iss(inputCommand.substr(10));
             string name;
             int memorySize;
@@ -648,7 +645,6 @@ int main() {
             ss >> name >> memorySize;
             name = trim(name);
 
-            // Split instructions
             std::istringstream iss(instructionString);
             string instr;
             vector<string> instructionList;
@@ -670,7 +666,6 @@ int main() {
                 cout << "Invalid command. Number of instructions must be limited to 1 - 50. Please try again.\n";
             }
             else {
-                /*cout << "Doing something\n";*/
                 static int processId = 0;
                 // size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
@@ -763,7 +758,6 @@ int main() {
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
 
-                // Add to scheduler
                 try {
                     scheduler->addProcess(process);
                 }
@@ -771,7 +765,6 @@ int main() {
 
                 }
 
-                // subCommands etc etc
                 string subCommand;
                 while (getline(cin, subCommand)) {
                     if (subCommand == "exit") {
@@ -783,11 +776,11 @@ int main() {
                     else if (subCommand == "process-smi") {
                         cout << "Process name: " << process->getName() << "\n";
                         cout << "ID: " << process->getId() << "\n";
-                        cout << "Messages:\n";  // Changed from "Logs:"
+                        cout << "Messages:\n";  
 
                         auto logs = process->getLogs();
                         for (const auto& log : logs) {
-                            cout << log << "\n";  // All logs are PRINT messages now
+                            cout << log << "\n";  
                         }
 
                         if (process->getIsFinished()) {
