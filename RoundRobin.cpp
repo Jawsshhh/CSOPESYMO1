@@ -149,10 +149,11 @@ void RRScheduler::workerLoop(int coreId) {
                 if (!pages.empty()) {
                     size_t pageCount = pages.size();
                     size_t instIdx = proc->getCurrentInstructionIndex();
-                    size_t pageIndex = instIdx % pageCount;
-                    int    pg = pages[pageIndex];
+                    int pg = pages[rand() % pages.size()];
+
                     while (!memoryManager.accessPage(pg)) {
                         memoryManager.pageFault(pg);
+
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
                 }
