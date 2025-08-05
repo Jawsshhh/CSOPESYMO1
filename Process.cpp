@@ -34,7 +34,7 @@ Process::~Process() {
 void Process::assignPages(const std::vector<int>& pages) {
     assignedPages = pages;
 
-    std::lock_guard<std::mutex> lock(fileMutex);
+    /*std::lock_guard<std::mutex> lock(fileMutex);
     if (logFile.is_open()) {
         logFile << "[PAGE ASSIGNMENT] Assigned " << pages.size() << " pages to process (Page IDs: ";
         for (size_t i = 0; i < pages.size(); ++i) {
@@ -43,7 +43,17 @@ void Process::assignPages(const std::vector<int>& pages) {
         }
         logFile << ")\n";
         logFile.flush();
+    }*/
+    std::stringstream ss;
+    ss << "[PAGE ASSIGNMENT] Assigned " << pages.size() << " pages to process (Page IDs: ";
+    for (size_t i = 0; i < pages.size(); ++i) {
+        ss << pages[i];
+        if (i != pages.size() - 1) ss << ", ";
     }
+    ss << ")";
+
+    // Store in-memory log if needed (optional)
+    logs.push_back(ss.str());
 }
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
