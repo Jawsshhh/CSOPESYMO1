@@ -14,6 +14,7 @@ FCFSScheduler::FCFSScheduler(int numCores,
     : Scheduler(numCores, maxMemory, frameSize, "csopesy-backing-store.txt"),
     delays_per_exec(delays_per_exec)
 {
+    running = true;
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;
         workerThreads.emplace_back(&FCFSScheduler::workerLoop, this, i);

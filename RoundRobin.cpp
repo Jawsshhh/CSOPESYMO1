@@ -14,6 +14,7 @@ RRScheduler::RRScheduler(int numCores,
     delays_per_exec(delays_per_exec),
     frameSize(frameSize)
 {
+    running = true;
     for (int i = 0; i < numCores; ++i) {
         coreAvailable[i] = true;
         workerThreads.emplace_back(&RRScheduler::workerLoop, this, i);
@@ -146,7 +147,10 @@ void RRScheduler::workerLoop(int coreId) {
                 // page-in if needed
                 const auto& pages = proc->getAssignedPages();
                 if (!pages.empty()) {
-                    int pg = pages[proc->getCurrentInstructionIndex() % frameSize];
+                    size_t pageCount = pages.size();
+                    size_t instIdx = proc->getCurrentInstructionIndex();
+                    size_t pageIndex = instIdx % pageCount;
+                    int    pg = pages[pageIndex];
                     while (!memoryManager.accessPage(pg)) {
                         memoryManager.pageFault(pg);
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));

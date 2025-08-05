@@ -544,7 +544,7 @@ int main() {
                         config.max_overall_mem,
                         config.mem_per_frame,
                         config.delays_per_exec));
-                    scheduler->start();
+                    
                 }
                 else if (config.scheduler == "\"rr\"") {
                     scheduler = std::make_unique<RRScheduler>(
@@ -554,7 +554,7 @@ int main() {
                         config.max_overall_mem,
                         config.mem_per_frame
                         );
-                    scheduler->start();
+                   
                 }
             }
             else {
