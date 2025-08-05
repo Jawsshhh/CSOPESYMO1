@@ -3,6 +3,8 @@ Ysabela Erika Alvarez
 Julianna Victoria Brizuela
 Josh Christian Nuñez
 
+*IMPORTANT* For MO2, please refer to the PageReallocation branch.
+
 Instructions to run:
 1. Clone the repository through Visual Studio 2022
 2. Run the main.cpp file.
@@ -26,22 +28,31 @@ delay-per-exec
 5. min-ins = minimum amount of instructions a process can have
 6. max-ins = maximum amount of instructions a process can have
 7. delay-per-exec = the scheduler's delay per instruction execution.
+8. max-overall-mem = the program's overall memory size.
+9. mem-per-frame = the memory size of each frame
+10. min-mem-per-proc = the minimum memory required by a process
+11. max-mem-per-proc = the maxmimum memory required by a process.
 
 Example config.txt:
-num-cpu 4
-scheduler rr
+num-cpu 8
+scheduler "rr"
 quantum-cycles 5
 batch-process-freq 1
-min-ins 50
-max-ins 75
+min-ins 1000
+max-ins 1000
 delay-per-exec 0
+max-overall-mem 1024
+mem-per-frame 256
+min-mem-per-proc 256
+max-mem-per-proc 512
 
 To use the app:
 1. Initialize -> sets up the program using the config file settings.
 2. scheduler-start -> automatically creates processes with a delay equal to batch-process-freq
 3. scheduler-end -> stops the process populstion
-4. screen -s <name> -> manually creates a screen and its respective process.
-5. screen -r <name> -> accesses a process's screen given that it exists/isn't finished.
-6. process-smi -> can only be accessed through a process screen and displays that process's instruction logs.
-7. screen -ls -> displays running and finished processes as well as CPU utilization.
-8. report-util -> same as screen -ls, but outputs it to a 'csopesy.txt' file.
+4. screen -s <name> <memorySize> -> manually creates a screen with its respective process name and memory size.
+5. screen -c <name> <memorySize> "<instructions>" -> manually creates a screen with its respective process name, memory size, and the list of instructions.
+6. screen -r <name> -> accesses a process's screen given that it exists/isn't finished.
+7. process-smi -> can only be accessed through a process screen and displays that process's instruction logs.
+8. screen -ls -> displays running and finished processes as well as CPU utilization.
+9. report-util -> same as screen -ls, but outputs it to a 'csopesy.txt' file.
