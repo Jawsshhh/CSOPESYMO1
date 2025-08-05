@@ -67,7 +67,7 @@ private:
     int selectVictim();
     void evict(int frameIdx);
     bool loadPage(int page, int frameIdx);
-    bool writePageToBackingStore(int page, const std::string& data);
+    bool writePageToBackingStore(int page, const std::string& data, int frameIdx);
     std::string readPageFromBackingStore(int page);
     bool pageExistsInBackingStore(int page);
     void logPageOperation(int page, const std::string& operation, bool success = true);

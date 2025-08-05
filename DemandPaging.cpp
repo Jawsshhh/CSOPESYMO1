@@ -13,7 +13,7 @@ DemandPagingAllocator::DemandPagingAllocator(size_t maxMemory, size_t frameSize,
     : totalFrames(maxMemory / frameSize),
     frameSize(frameSize),
     nextPageId(0),
-    maxVirtualPages(static_cast<int>((maxMemory / frameSize) * 2)),
+    maxVirtualPages(static_cast<int>((maxMemory / frameSize) * 1.5)),
     backingStoreFile(backingStore) {
 
     frameTable.resize(totalFrames);
@@ -109,7 +109,7 @@ void DemandPagingAllocator::evict(int frameIdx) {
 
     // Write to backing store if page is dirty
     if (entry.dirty) {
-        bool writeSuccess = writePageToBackingStore(page, entry.data);
+        bool writeSuccess = writePageToBackingStore(page, entry.data, frameIdx);
         logPageOperation(page, writeSuccess ? "EVICT_WRITE" : "EVICT_WRITE_FAILED", writeSuccess);
 
         if (writeSuccess) {
@@ -126,6 +126,7 @@ void DemandPagingAllocator::evict(int frameIdx) {
     frame.occupied = false;
     frame.page = -1;
 }
+
 
 bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
     auto& entry = globalPageTable[page];
@@ -155,7 +156,7 @@ bool DemandPagingAllocator::loadPage(int page, int frameIdx) {
     return true;
 }
 
-bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string& data) {
+bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string& data, int frameIdx) {
     std::lock_guard<std::mutex> lock(backingStoreMutex);
 
     try {
@@ -176,18 +177,53 @@ bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string&
         auto it = std::find(lines.begin(), lines.end(), pageHeader);
 
         if (it != lines.end()) {
-            // Page exists, replace its data
+            // Page exists, find the data section and update it
             size_t headerPos = std::distance(lines.begin(), it);
-            size_t dataPos = headerPos + 1;
 
-            // Replace or insert data line
-            if (dataPos < lines.size()) {
-                lines[dataPos] = data;
+            // Look for the data line (should be after the header)
+            for (size_t i = headerPos + 1; i < lines.size(); ++i) {
+                if (lines[i].find("DATA:") == 0) {
+                    // Update existing data line with frame information
+                    lines[i] = "DATA:" + data;
+                    pageFound = true;
+                    break;
+                }
+                // If we hit another page header or empty line, insert data here
+                if (lines[i].find("[PAGE:") == 0 || lines[i].empty()) {
+                    lines.insert(lines.begin() + i, "DATA:" + data);
+                    lines.insert(lines.begin() + i + 1, "EVICTED_FROM_FRAME:" + std::to_string(frameIdx));
+                    pageFound = true;
+                    break;
+                }
+            }
+
+            // If we didn't find a data line, append it after the header
+            if (!pageFound) {
+                lines.insert(lines.begin() + headerPos + 1, "DATA:" + data);
+                lines.insert(lines.begin() + headerPos + 2, "EVICTED_FROM_FRAME:" + std::to_string(frameIdx));
+                pageFound = true;
             }
             else {
-                lines.insert(lines.begin() + dataPos, data);
+                // Update or add frame information
+                bool frameInfoFound = false;
+                for (size_t i = headerPos + 1; i < lines.size(); ++i) {
+                    if (lines[i].find("EVICTED_FROM_FRAME:") == 0) {
+                        lines[i] = "EVICTED_FROM_FRAME:" + std::to_string(frameIdx);
+                        frameInfoFound = true;
+                        break;
+                    }
+                    if (lines[i].find("[PAGE:") == 0) {
+                        // Hit next page, insert frame info before it
+                        lines.insert(lines.begin() + i, "EVICTED_FROM_FRAME:" + std::to_string(frameIdx));
+                        frameInfoFound = true;
+                        break;
+                    }
+                }
+                if (!frameInfoFound) {
+                    // Add frame info at the end
+                    lines.push_back("EVICTED_FROM_FRAME:" + std::to_string(frameIdx));
+                }
             }
-            pageFound = true;
         }
 
         // Write back to file
@@ -204,7 +240,8 @@ bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string&
         // If page wasn't found, append new entry
         if (!pageFound) {
             outFile << pageHeader << "\n";
-            outFile << data << "\n";
+            outFile << "DATA:" << data << "\n";
+            outFile << "EVICTED_FROM_FRAME:" << frameIdx << "\n";
             outFile << "\n"; // Empty line separator
         }
 
@@ -217,7 +254,6 @@ bool DemandPagingAllocator::writePageToBackingStore(int page, const std::string&
         return false;
     }
 }
-
 std::string DemandPagingAllocator::readPageFromBackingStore(int page) {
     std::lock_guard<std::mutex> lock(backingStoreMutex);
 
@@ -232,10 +268,16 @@ std::string DemandPagingAllocator::readPageFromBackingStore(int page) {
 
         while (std::getline(file, line)) {
             if (line == pageHeader) {
-                // Found the page header, read the data line
-                if (std::getline(file, line)) {
-                    file.close();
-                    return line;
+                // Found the page header, look for the data line
+                while (std::getline(file, line)) {
+                    if (line.find("DATA:") == 0) {
+                        file.close();
+                        return line.substr(5); // Remove "DATA:" prefix
+                    }
+                    // Stop if we hit another page header or empty line
+                    if (line.find("[PAGE:") == 0 || line.empty()) {
+                        break;
+                    }
                 }
                 break;
             }
@@ -250,7 +292,6 @@ std::string DemandPagingAllocator::readPageFromBackingStore(int page) {
         return "";
     }
 }
-
 bool DemandPagingAllocator::pageExistsInBackingStore(int page) {
     std::lock_guard<std::mutex> lock(backingStoreMutex);
 
@@ -387,7 +428,6 @@ void DemandPagingAllocator::releaseProcessPages(int pid) {
     logPageOperation(-1, "PROCESS_" + std::to_string(pid) + "_RELEASED");
 }
 
-// FIXED: New internal method that doesn't acquire locks (assumes caller has lock)
 void DemandPagingAllocator::releasePageInternal(int pageId) {
     // Remove from global page table
     auto pageIt = globalPageTable.find(pageId);
@@ -396,30 +436,31 @@ void DemandPagingAllocator::releasePageInternal(int pageId) {
 
         // If page is in memory, free the frame
         if (entry.valid && entry.frameIndex != -1) {
-            frameTable[entry.frameIndex].occupied = false;
-            frameTable[entry.frameIndex].page = -1;
+            int frameIdx = entry.frameIndex;
+            frameTable[frameIdx].occupied = false;
+            frameTable[frameIdx].page = -1;
             logPageOperation(pageId, "FRAME_FREED");
-        }
 
-        // If page is dirty, write to backing store before releasing
-        // Store the data before erasing from page table
-        std::string pageData;
-        bool needsWrite = entry.dirty;
-        if (needsWrite) {
-            pageData = entry.data;
-        }
-
-        // Remove from page table first
-        globalPageTable.erase(pageIt);
-
-        // Now handle backing store write without holding memory mutex
-        if (needsWrite) {
-            bool writeSuccess = writePageToBackingStore(pageId, pageData);
-            logPageOperation(pageId, writeSuccess ? "FINAL_WRITE" : "FINAL_WRITE_FAILED");
-            if (writeSuccess) {
-                pagesOut++;  
+            // If page is dirty, write to backing store before releasing
+            if (entry.dirty) {
+                bool writeSuccess = writePageToBackingStore(pageId, entry.data, frameIdx);
+                logPageOperation(pageId, writeSuccess ? "FINAL_WRITE" : "FINAL_WRITE_FAILED");
+                if (writeSuccess) {
+                    pagesOut++;
+                }
             }
         }
+        else if (entry.dirty) {
+            // Page not in memory but dirty, write without frame info (use -1)
+            bool writeSuccess = writePageToBackingStore(pageId, entry.data, -1);
+            logPageOperation(pageId, writeSuccess ? "FINAL_WRITE" : "FINAL_WRITE_FAILED");
+            if (writeSuccess) {
+                pagesOut++;
+            }
+        }
+
+        // Remove from page table
+        globalPageTable.erase(pageIt);
     }
 
     // Return page ID to reusable pool

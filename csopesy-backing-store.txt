@@ -1,30 +1,32 @@
-[PAGE:8]
-Process_process_24_Page_8
-
-[PAGE:11]
-Process_process_27_Page_11
-
-[PAGE:14]
-Process_process_30_Page_14
+[PAGE:0]
+DATA:Process_process_12_Page_0
+EVICTED_FROM_FRAME:0
 
 [PAGE:1]
-Process_process_17_Page_1
+DATA:Process_process_13_Page_1
+EVICTED_FROM_FRAME:1
 
 [PAGE:2]
-Process_process_18_Page_2
+DATA:Process_process_14_Page_2
+EVICTED_FROM_FRAME:2
 
 [PAGE:3]
-Process_process_35_Page_3
+DATA:Process_process_15_Page_3
+EVICTED_FROM_FRAME:3
 
 [PAGE:4]
-Process_process_20_Page_4
+DATA:Process_process_16_Page_4
+EVICTED_FROM_FRAME:4
 
 [PAGE:5]
-Process_process_21_Page_5
+DATA:Process_process_33_Page_5
+EVICTED_FROM_FRAME:0
 
 [PAGE:6]
-Process_process_22_Page_6
+DATA:Process_process_18_Page_6
+EVICTED_FROM_FRAME:6
 
 [PAGE:7]
-Process_process_23_Page_7
+DATA:Process_process_29_Page_7
+EVICTED_FROM_FRAME:6
 
