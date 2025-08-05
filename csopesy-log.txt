@@ -1,0 +1,25 @@
+=== Process List ===
+CPU utilization: 93%
+Cores used: 15
+Cores available: 1
+
+Running processes (15):
+  process_19 (ID: 20)  (08/05/2025 05:31:30PM)  on Core: 0  9/86
+  process_5 (ID: 6)  (08/05/2025 05:31:30PM)  on Core: 1  3/90
+  process_13 (ID: 14)  (08/05/2025 05:31:30PM)  on Core: 2  15/84
+  process_18 (ID: 19)  (08/05/2025 05:31:30PM)  on Core: 3  9/84
+  process_3 (ID: 4)  (08/05/2025 05:31:30PM)  on Core: 4  17/87
+  process_7 (ID: 8)  (08/05/2025 05:31:30PM)  on Core: 5  32/91
+  process_6 (ID: 7)  (08/05/2025 05:31:30PM)  on Core: 7  5/87
+  process_14 (ID: 15)  (08/05/2025 05:31:30PM)  on Core: 8  15/85
+  process_10 (ID: 11)  (08/05/2025 05:31:30PM)  on Core: 9  27/87
+  process_21 (ID: 22)  (08/05/2025 05:31:30PM)  on Core: 10  9/88
+  process_0 (ID: 1)  (08/05/2025 05:31:30PM)  on Core: 11  7/89
+  process_2 (ID: 3)  (08/05/2025 05:31:30PM)  on Core: 12  24/85
+  process_8 (ID: 9)  (08/05/2025 05:31:30PM)  on Core: 13  9/87
+  process_12 (ID: 13)  (08/05/2025 05:31:30PM)  on Core: 14  7/90
+  process_1 (ID: 2)  (08/05/2025 05:31:30PM)  on Core: 2  13/92
+
+Finished processes (0):
+===================
+

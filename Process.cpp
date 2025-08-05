@@ -16,10 +16,10 @@ Process::Process(const std::string& name, int id, size_t memoryRequired)
     ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
     creationTime = ss.str();
 
-    std::lock_guard<std::mutex> lock(fileMutex);
+   /* std::lock_guard<std::mutex> lock(fileMutex);
     logFile.open("process_" + std::to_string(id) + ".txt", std::ios::out | std::ios::trunc);
     logFile << "Process name: " << name << "\nLogs:\n";
-    logFile.flush();
+    logFile.flush();*/
 
 }
 
@@ -48,7 +48,7 @@ void Process::assignPages(const std::vector<int>& pages) {
 
 void Process::logInstruction(const std::string& type, const std::string& details) {
    
-    time_t now = time(nullptr);
+    /*time_t now = time(nullptr);
     tm local;
     localtime_s(&local, &now);
     std::stringstream ss;
@@ -57,7 +57,19 @@ void Process::logInstruction(const std::string& type, const std::string& details
     std::lock_guard<std::mutex> lock(fileMutex);
     logFile << "(" << ss.str() << ") Core:" << assignedCore
         << " \"" << details << "\"\n";
-    logFile.flush();
+    logFile.flush();*/
+
+    time_t now = time(nullptr);
+    tm local;
+    localtime_s(&local, &now);
+    std::stringstream ss;
+    ss << std::put_time(&local, "%m/%d/%Y %I:%M:%S%p");
+
+    std::stringstream logEntry;
+    logEntry << "(" << ss.str() << ") Core:" << assignedCore
+        << " \"" << details << "\"";
+
+    logs.push_back(logEntry.str());
     
 }
 
@@ -66,7 +78,7 @@ void Process::addInstruction(std::shared_ptr<Instruction> instruction) {
 }
 
 std::vector<std::string> Process::getLogs() const {
-    std::vector<std::string> logs;
+    /*std::vector<std::string> logs;
     std::string logFileName = "process_" + std::to_string(id) + ".txt";
 
     std::lock_guard<std::mutex> lock(fileMutex);
@@ -76,12 +88,12 @@ std::vector<std::string> Process::getLogs() const {
     std::string line;
     while (std::getline(logFile, line)) {
         logs.push_back(line);
-    }
+    }*/
     return logs;
 }
 
 void Process::setMemoryAccessViolation(bool violation, const std::string& address) {
-    hasMemoryViolation = violation;
+    /*hasMemoryViolation = violation;
     violationAddress = address;
 
     if (violation) {
@@ -100,6 +112,22 @@ void Process::setMemoryAccessViolation(bool violation, const std::string& addres
                 << violationTime << ". Address " << address << " invalid.\n";
             logFile.flush();
         }
+    }*/
+    hasMemoryViolation = violation;
+    violationAddress = address;
+
+    if (violation) {
+        time_t now = time(nullptr);
+        tm local;
+        localtime_s(&local, &now);
+        std::stringstream ss;
+        ss << std::put_time(&local, "%H:%M:%S");
+        violationTime = ss.str();
+
+        setIsFinished(true);
+
+        logs.push_back("[MEMORY VIOLATION] Process terminated due to invalid memory access at " +
+            violationTime + ". Address " + address + " invalid.");
     }
 }
 

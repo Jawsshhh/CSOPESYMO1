@@ -525,6 +525,11 @@ int main() {
         }
 
         else if (inputCommand.rfind("screen -s ", 0) == 0) {
+            if (!config.initialized) {
+                cout << "Error: System not initialized. Use 'initialize' first.\n";
+                continue;
+            }
+
             // string name = inputCommand.substr(10);
             std::istringstream iss(inputCommand.substr(10));
             string name;
@@ -603,6 +608,11 @@ int main() {
         }
 
         else if (inputCommand.rfind("screen -c ", 0) == 0) {
+            if (!config.initialized) {
+                cout << "Error: System not initialized. Use 'initialize' first.\n";
+                continue;
+            }
+
             std::string fullCmd = inputCommand.substr(10);  // Remove "screen -c "
             size_t quoteStart = fullCmd.find('"');
             size_t quoteEnd = fullCmd.rfind('"');
@@ -782,10 +792,15 @@ int main() {
 
 
         else if (inputCommand.rfind("screen -r ", 0) == 0) {
+            if (!config.initialized) {
+                cout << "Error: System not initialized. Use 'initialize' first.\n";
+                continue;
+            }
+
             string name = inputCommand.substr(10);
             auto process = consoleManager.getScreenProcess(name);
 
-            if (!process ) {
+            if (!process || process->getIsFinished()) {
                 cout << "Process " << name << " not found.\n";
                 continue;
             }
@@ -856,6 +871,11 @@ int main() {
         }
 
         else if (inputCommand == "scheduler-stop") {
+            if (!config.initialized) {
+                cout << "Error: System not initialized. Use 'initialize' first.\n";
+                continue;
+            }
+            
             if (!config.populate_running) {
                 cout << "Process population is not currently running.\n";
                 continue;
@@ -877,21 +897,30 @@ int main() {
             }
         }
         else if (inputCommand == "screen -ls") {
-            if(scheduler){
+            if (!scheduler) {
+                std::cout << "Error: Scheduler not initialized.\n";
+            }
+            else {
                 scheduler->listProcesses();
             }
         }
 
         else if (inputCommand == "process-smi") { // NEW
             // std::cout << "Doing something.";
-            if (scheduler) {
+            if (!scheduler) {
+                std::cout << "Error: Scheduler not initialized.\n";
+            }
+            else {
                 scheduler->displayProcessSmi();
             }
         }
 
         else if (inputCommand == "vmstat") { // NEW
             //std::cout << "Doing something.";
-            if (scheduler) {
+            if (!scheduler) {
+                std::cout << "Error: Scheduler not initialized.\n";
+            }
+            else {
                 scheduler->displayVMStat();
             }
         }

@@ -77,6 +77,8 @@ private:
     std::vector<int> assignedPages;
     std::unordered_map<size_t, uint16_t> memoryMap;
     std::shared_ptr<ForInstruction> currentForLoop;
+
+    std::vector<std::string> logs;
     
     std::string name;
     int id;
