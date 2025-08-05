@@ -74,6 +74,13 @@ public:
 
         cout << "\033[" << 32 << "m";
         cout << "\nHello, Welcome to CSOPESY commandLine!";
+        cout << "\033[0m";
+        cout << "\n";
+        cout << "\nDevelopers: ";
+        cout << "\nErika Alvarez, Julianna Brizuela, Josh Nunez ";
+
+        cout << "\n";
+
         cout << "\033[" << 33 << "m";
         cout << "\nType 'exit' to quit, 'clear' to clear the screen\n";
         cout << "\033[0m";
