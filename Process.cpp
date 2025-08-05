@@ -149,6 +149,10 @@ bool Process::shouldWakeUp() const
 
 bool Process::executeNextInstruction() {
     if (hasMemoryViolation) {
+        logInstruction(
+            "MEMORY VIOLATION",
+            getMemoryViolationDetails()
+        );
         return false;
     }
 

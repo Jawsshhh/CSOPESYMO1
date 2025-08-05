@@ -328,7 +328,7 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
 
         // Add instructions to the process
         for (int j = 0; j < numInstructions && config.populate_running; j++) {
-            int instructionType = rand() % 7;   
+            int instructionType = rand() % 8;   
             switch (instructionType) {
                 case 0: {
                     auto printInstr = make_shared<PrintInstruction>(
@@ -419,14 +419,41 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                 }
                 case 6: {
                     std::string varName = "readVar" + std::to_string(rand() % 5);
-                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
+                    size_t base = process->getBaseMemoryAddress();
+                    size_t procSize = process->getMemoryNeeded();
+                    size_t offset;
+                    if ((rand() % 10) == 0) {
+                        offset = procSize + (rand() % 16);
+                    }
+                    else {
+                        offset = rand() % procSize;
+                    }
+                    size_t addrValue = base + offset;
+
+                    std::stringstream ss;
+                    ss << "0x" << std::hex << addrValue;
+                    std::string address = ss.str();
+
                     auto readInstr = make_shared<ReadInstruction>(
                         process.get(), varName, address);
                     process->addInstruction(readInstr);
                     break;
                 }
                 case 7: {
-                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
+                    size_t base = process->getBaseMemoryAddress();
+                    size_t procSize = process->getMemoryNeeded();
+                    size_t offset;
+                    if ((rand() % 10) == 0) {
+                        offset = procSize + (rand() % 16);
+                    }
+                    else {
+                        offset = rand() % procSize;
+                    }
+                    size_t addrValue = base + offset;
+
+                    std::stringstream ss;
+                    ss << "0x" << std::hex << addrValue;
+                    std::string address = ss.str();
                     std::string value = std::to_string(rand() % 50);
 
                     auto writeInstr = make_shared<WriteInstruction>(
