@@ -270,7 +270,7 @@ bool ForInstruction::executeNextInLoop() {
 		instruction->execute();
 		process->logInstruction(
 			process->instructionTypeToString(instruction->getInstructionType()),
-			"INSIDE FOR LOOP: " + instruction->getDetails()
+			"[INSIDE FOR LOOP] " + instruction->getDetails()
 		);
 		currentInstructionIndex++;
 
@@ -298,7 +298,9 @@ std::string ForInstruction::getDetails() const {
 }
 
 /*
-* READ INSTRUCTION
+* READ INSTRUCTION: performs a retrieval of a uint16 value from memory
+and stores it to a variable, var. If the memory block isn’t initialized, the uint16 value
+is 0
 */
 ReadInstruction::ReadInstruction(Process* process, const std::string& varName, const std::string& memoryAddress)
 	: Instruction(process, Instruction::InstructionType::READ), varName(varName), memoryAddress(memoryAddress)

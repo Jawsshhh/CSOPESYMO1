@@ -93,26 +93,6 @@ std::vector<std::string> Process::getLogs() const {
 }
 
 void Process::setMemoryAccessViolation(bool violation, const std::string& address) {
-    /*hasMemoryViolation = violation;
-    violationAddress = address;
-
-    if (violation) {
-        time_t now = time(nullptr);
-        tm local;
-        localtime_s(&local, &now);
-        std::stringstream ss;
-        ss << std::put_time(&local, "%H:%M:%S");
-        violationTime = ss.str();
-
-        setIsFinished(true);
-
-        std::lock_guard<std::mutex> lock(fileMutex);
-        if (logFile.is_open()) {
-            logFile << "[MEMORY VIOLATION] Process terminated due to invalid memory access at "
-                << violationTime << ". Address " << address << " invalid.\n";
-            logFile.flush();
-        }
-    }*/
     hasMemoryViolation = violation;
     violationAddress = address;
 
@@ -126,8 +106,8 @@ void Process::setMemoryAccessViolation(bool violation, const std::string& addres
 
         setIsFinished(true);
 
-        logs.push_back("[MEMORY VIOLATION] Process terminated due to invalid memory access at " +
-            violationTime + ". Address " + address + " invalid.");
+        logs.push_back("Process " + name + "shut down due to memory access violation error that occurred at " +
+            violationTime + ". " + address + " invalid.");
     }
 }
 
@@ -173,26 +153,17 @@ bool Process::executeNextInstruction() {
     }
 
     if (isSleeping) {
-        
-        logInstruction(
-            "SLEEP-TICK",
-            "Sleeping, " + std::to_string(remainingSleepCycles) + " cycles remaining"
-        );
-
         --remainingSleepCycles;
         if (remainingSleepCycles > 0) {
             return true;  
         }
 
         isSleeping = false;
-        logInstruction("WAKE", "Woke up after sleep");
         return true;
     }
 
     if (isInForLoop && currentForLoop) {
         currentForLoop->execute();
-
-        logInstruction("FOR", currentForLoop->getDetails());
 
         if (currentForLoop->isLoopComplete()) {
             clearForLoop();
@@ -212,7 +183,7 @@ bool Process::executeNextInstruction() {
                 setCurrentForLoop(forInstr);
                 forInstr->execute();
 
-                logInstruction("FOR", "[INSIDE FOR LOOP] " + forInstr->getDetails());
+                logInstruction("FOR", forInstr->getDetails());
 
                 return true;
             }

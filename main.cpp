@@ -284,7 +284,7 @@ std::shared_ptr<ForInstruction> parseForInstruction(const std::string& forLine, 
 
     if (startBracket == std::string::npos || endBracket == std::string::npos ||
         repeatPos == std::string::npos || repeatPos <= endBracket) {
-        return nullptr; // Invalid format
+        return nullptr; 
     }
 
    
@@ -292,7 +292,7 @@ std::shared_ptr<ForInstruction> parseForInstruction(const std::string& forLine, 
     instructionsStr = trim(instructionsStr);
 
     
-    std::string repeatStr = forLine.substr(repeatPos + 6); // Skip "REPEAT"
+    std::string repeatStr = forLine.substr(repeatPos + 6); 
     repeatStr = trim(repeatStr);
     int repeatCount = std::stoi(repeatStr);
 
@@ -314,19 +314,16 @@ std::shared_ptr<ForInstruction> parseForInstruction(const std::string& forLine, 
 }
 
 void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_ptr<Scheduler>& scheduler) {
-    static int processCounter = 0;  // Counter for unique process names
+    static int processCounter = 0; 
 
     while (config.populate_running) {
-        // Create a new process with a unique name
         string processName = "process_" + to_string(processCounter++);
 
-        // Create the process and screen
         size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
         auto process = make_shared<Process>(processName, processCounter, mem_per_proc);
         consoleManager.addNewScreen(processName, process, mem_per_proc);
 
-        // Generate random number of instructions
         int numInstructions = config.min_ins + rand() % (config.max_ins - config.min_ins + 1);
 
         // Add instructions to the process
@@ -391,17 +388,8 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                     break;
                 }
                 case 5: {
-                    /*std::string varName = "readVar" + std::to_string(rand() % 5);
-                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
-                    auto readInstr = make_shared<ReadInstruction>(
-                        process.get(), varName, address);
-                    process->addInstruction(readInstr);*/
-                    break;
-                }
-                case 6: {
                     std::vector<std::shared_ptr<Instruction>> nestedInstructions;
-
-                    // Add 2-3 simple instructions to the FOR loop
+                  
                     int nestedCount = 2 + (rand() % 2);
                     for (int k = 0; k < nestedCount; k++) {
                         int nestedType = rand() % 3;
@@ -423,10 +411,27 @@ void populateProcesses(Config& config, ConsoleManager& consoleManager, unique_pt
                         }
                     }
 
-                    int repeatCount = 2 + (rand() % 4); // 2-5 repetitions
+                    int repeatCount = 2 + (rand() % 4); 
                     auto forInstr = make_shared<ForInstruction>(
                         process.get(), nestedInstructions, repeatCount);
                     process->addInstruction(forInstr);
+                    break;
+                }
+                case 6: {
+                    std::string varName = "readVar" + std::to_string(rand() % 5);
+                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
+                    auto readInstr = make_shared<ReadInstruction>(
+                        process.get(), varName, address);
+                    process->addInstruction(readInstr);
+                    break;
+                }
+                case 7: {
+                    std::string address = "0x" + std::to_string(0x1000 + (rand() % 0x1000));
+                    std::string value = std::to_string(rand() % 50);
+
+                    auto writeInstr = make_shared<WriteInstruction>(
+                        process.get(), address, value);
+                    process->addInstruction(writeInstr);
                     break;
                 }
             }
@@ -533,7 +538,7 @@ int main() {
             // string name = inputCommand.substr(10);
             std::istringstream iss(inputCommand.substr(10));
             string name;
-            int memorySize;    
+            int memorySize;
 
             iss >> name >> memorySize;
             name = trim(name);
@@ -551,13 +556,9 @@ int main() {
             
             else {
                 static int processId = 0;
-                //size_t mem_per_proc = getRandomMemorySize(config.min_mem_per_proc, config.max_mem_per_proc);
 
                 auto process = make_shared<Process>(name, processId++, memorySize);   
                 process->setBaseMemoryAddress(0x1000 + (processId * 0x10000));
-
-                // Adds process to scheduler
-               
 
                 consoleManager.addNewScreen(name, process, memorySize);
                 consoleManager.initializeScreen();
@@ -596,7 +597,7 @@ int main() {
                         }
                     }
                     else if (subCommand == "memory-violation") {
-                        cout << process->getMemoryViolationDetails() << "\n";  // CHANGED
+                        cout << process->getMemoryViolationDetails() << "\n"; 
                         cout << "Enter command: ";
                     }
                     else {
@@ -613,12 +614,12 @@ int main() {
                 continue;
             }
 
-            std::string fullCmd = inputCommand.substr(10);  // Remove "screen -c "
+            std::string fullCmd = inputCommand.substr(10); 
             size_t quoteStart = fullCmd.find('"');
             size_t quoteEnd = fullCmd.rfind('"');
 
-            std::string temp = fullCmd.substr(0, quoteStart);  // part before the instruction string
-            std::string instructionString = fullCmd.substr(quoteStart + 1, quoteEnd - quoteStart - 1); // inside quotes
+            std::string temp = fullCmd.substr(0, quoteStart);  
+            std::string instructionString = fullCmd.substr(quoteStart + 1, quoteEnd - quoteStart - 1); 
 
             std::istringstream ss(temp);
             std::string name;
@@ -638,7 +639,6 @@ int main() {
                 }
             }
 
-            // Validity checkers
             if (consoleManager.findScreenSessions(name)) {
                 cout << "Screen already exists. Please type another name.\n";
             }
@@ -702,10 +702,8 @@ int main() {
                     else if (type == "FOR") {
                         std::string fullForInstruction = instrLine;
 
-                        // If this doesn't contain REPEAT, we need to look ahead
                         size_t repeatPos = fullForInstruction.find("REPEAT");
                         if (repeatPos == std::string::npos) {
-                            // Look ahead to find the complete FOR instruction
                             while (std::getline(iss, instr, ';')) {
                                 fullForInstruction += "; " + trim(instr);
                                 if (instr.find("REPEAT") != std::string::npos) {
@@ -752,8 +750,6 @@ int main() {
 
                 }
 
-                
-                
                 // subCommands etc etc
                 string subCommand;
                 while (getline(cin, subCommand)) {
@@ -787,9 +783,7 @@ int main() {
                     cout << "Enter command: ";
                 }
             }
-
         }
-
 
         else if (inputCommand.rfind("screen -r ", 0) == 0) {
             if (!config.initialized) {
@@ -842,7 +836,6 @@ int main() {
                     cout << "Unknown screen command. Type 'exit' to return.\n";
                     
                 }
-                
             }
         }
 
@@ -905,8 +898,7 @@ int main() {
             }
         }
 
-        else if (inputCommand == "process-smi") { // NEW
-            // std::cout << "Doing something.";
+        else if (inputCommand == "process-smi") { 
             if (!scheduler) {
                 std::cout << "Error: Scheduler not initialized.\n";
             }
@@ -915,8 +907,7 @@ int main() {
             }
         }
 
-        else if (inputCommand == "vmstat") { // NEW
-            //std::cout << "Doing something.";
+        else if (inputCommand == "vmstat") {
             if (!scheduler) {
                 std::cout << "Error: Scheduler not initialized.\n";
             }
