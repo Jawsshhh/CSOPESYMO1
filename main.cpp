@@ -605,14 +605,17 @@ int main() {
                 string subCommand;
                 while (getline(cin, subCommand)) {
                     if (subCommand == "exit") {
-                        // … existing exit logic …
+                        consoleManager.destroyScreen();
+                        consoleManager.switchConsole("MAIN");
+                        consoleManager.initializeScreen();
+                        break;
                     }
                     else if (subCommand == "process-smi") {
-                        // show violation if any
+                      
                         if (process->hasMemoryAccessViolation()) {
                             cout << process->getMemoryViolationDetails() << "\n";
                         }
-                        // then show normal logs
+                       
                         cout << "Process name: " << process->getName() << "\n"
                             << "ID: " << process->getId() << "\n"
                             << "Messages:\n";
@@ -628,7 +631,7 @@ int main() {
                     else {
                         cout << "Unknown screen command. Type 'exit' to return.\n";
                     }
-                    cout << "Enter command: ";
+                    cout << "Enter a command: ";
                 }
             }
         }
